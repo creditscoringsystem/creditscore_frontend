@@ -1,79 +1,124 @@
-import React from "react";
-import Link from "next/link";
-import Footer from "../components/Footer";
+import Head from 'next/head';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useScrollSpy } from '@/hooks/useScrollSpy';
 
-export default function HomePage() {
+export default function Home() {
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const sectionIds = ['home', 'how-it-works', 'features', 'faqs'];
+  const activeSection = useScrollSpy(sectionIds);
+
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
-        <div className="flex items-center space-x-2">
-          <img src="/logo.svg" alt="Logo" className="h-8 w-auto" />
-          <span className="text-white text-lg font-semibold">Credit Scoring System</span>
-        </div>
-        <nav className="space-x-4 hidden md:flex text-white items-center">
-          {["Home", "How It Works", "Features", "Payments", "FAQs"].map((link) => (
-            <a
-              key={link}
-              href={`#${link.toLowerCase().replace(/\s/g, "-")}`}
-              className="hover:underline"
-            >
-              {link}
-            </a>
-          ))}
-          <Link href="/login" className="px-4 py-2 border border-white rounded hover:bg-white/20">
-            Login
-          </Link>
-          <Link href="/signup" className="px-4 py-2 bg-white/30 rounded hover:bg-white/40">
-            Sign up
-          </Link>
-        </nav>
-      </header>
+    <>
+      <Head>
+        <title>Credit Scoring System</title>
+      </Head>
 
-      {/* Hero Section */}
-      <main
-        className="flex-grow relative overflow-hidden font-sans"
-        style={{
-          background: "linear-gradient(90deg, rgba(212,255,235,0) 4%, rgba(195,255,99,0.46) 57%, #62DD61 100%)",
-        }}
-      >
-        {/* Blobs */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-green-400 rounded-full opacity-50 filter blur-3xl" />
-        <div className="absolute top-10 left-1/3 w-40 h-40 bg-green-300 rounded-full opacity-40 filter blur-2xl" />
-        <div className="absolute bottom-10 right-1/4 w-60 h-60 bg-green-300 rounded-full opacity-50 filter blur-2xl" />
+      <main className="relative min-h-screen pt-24 overflow-hidden">
+        {/* Foreground content */}
+        <section
+          id="home"
+          className="flex items-center justify-center min-h-[calc(100vh-6rem)] relative z-10"
+        >
+          <h1 className="text-5xl md:text-6xl font-bold text-green-900 text-center px-4 drop-shadow-[2px_1px_0_#1f7d1c] transition-transform duration-200 active:scale-95">
+            Welcome to Credit Scoring UI
+          </h1>
+        </section>
 
-        {/* Content */}
-        <div className="relative z-10 container mx-auto px-6 py-32 flex flex-col-reverse md:flex-row items-center gap-12">
-          {/* Text */}
-          <div className="flex-1 text-center md:text-left space-y-6">
-            <h1 className="text-[56px] leading-[64px] font-bold text-[#64E963] tracking-tight">
-              Know Your Credit.<br />
-              Empower Your Future.
-            </h1>
-            <p className="text-gray-700 text-base leading-relaxed max-w-md mx-auto md:mx-0">
-              Get instant insights into your credit score. Track, improve, and take control of your financial health.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-full transition-transform transform hover:scale-105"
-            >
-              Check My Score Now →
-            </Link>
+        {/* Overlay when modal open */}
+        {(showLogin || showSignup) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300" />
+        )}
+
+        {/* Navbar */}
+        /*<header className="fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-md">
+          <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-5">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <Image src="/logo.svg" alt="Logo" width={42} height={42} />
+              <span className="font-bold text-xl md:text-2xl text-[#22A521]">
+                Credit Scoring System
+              </span>
+            </div>
+
+            {/* Navigation Links */}
+            <ul className="hidden lg:flex gap-10 text-white text-base md:text-lg font-medium tracking-wide">
+              {sectionIds.map((id) => (
+                <li key={id}>
+                  <Link
+                    href={`#${id}`}
+                    scroll={false}
+                    className={`
+                      px-2 pb-1 transition-colors duration-200
+                      ${
+                        activeSection === id
+                          ? 'underline underline-offset-4 decoration-lime-300 decoration-[1.5px] text-white font-semibold'
+                          : 'text-lime-200 hover:text-white'
+                      }
+                    `}
+                  >
+                    {id
+                      .replace(/-/g, ' ')
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {/* Action Buttons */}
+            <div className="hidden lg:flex gap-4">
+              <button
+                onClick={() => setShowLogin(true)}
+                className="px-5 py-2 text-white text-base font-sans rounded-full hover:bg-white hover:text-black transition"
+                style={{ borderWidth: '1.5px', borderColor: 'white' }}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => setShowSignup(true)}
+                className="px-5 py-2 text-white text-base font-sans rounded-full hover:bg-white hover:text-black transition"
+                style={{ borderWidth: '1.5px', borderColor: 'white' }}
+              >
+                Sign up
+              </button>
+            </div>
+          </nav>
+        </header>
+
+        {/* Modal - Login */}
+        {showLogin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-lg relative">
+              <button
+                onClick={() => setShowLogin(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-black"
+              >
+                ✕
+              </button>
+              <h2 className="text-xl font-semibold mb-4">Login</h2>
+              <p className="text-sm text-gray-600">Login form coming soon...</p>
+            </div>
           </div>
+        )}
 
-          {/* Credit Card */}
-          <div className="flex-1 flex justify-center md:justify-end">
-            <img
-              src="/credit-card.png"
-              alt="Credit Card"
-              className="w-72 md:w-96 rounded-2xl transform rotate-6 backdrop-blur-lg bg-white/20 shadow-lg"
-            />
+        {/* Modal - Signup */}
+        {showSignup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-lg relative">
+              <button
+                onClick={() => setShowSignup(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-black"
+              >
+                ✕
+              </button>
+              <h2 className="text-xl font-semibold mb-4">Sign up</h2>
+              <p className="text-sm text-gray-600">Signup form coming soon...</p>
+            </div>
           </div>
-        </div>
+        )}
       </main>
-
-      {/* Footer */}
-      <Footer />
-    </div>
+    </>
   );
 }
