@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* rồi đến @import font và các style custom của bạn */
 
 /* Biến theme mặc định */
 :root {
@@ -35,10 +40,11 @@ body {
 body {
   @apply font-sans;
 background: linear-gradient(
-  65deg,
-  rgba(212, 255, 235, 0.04) 28%,
-  rgba(195, 255, 99, 1) 50%,
-  rgba(98, 221, 97, 1) 80%
+  50deg,
+  rgba(212, 255, 235, 0.04) 30%,
+  rgba(169, 255, 99, 0.877) 60%,
+  rgba(97, 221, 97, 0.9) 75%,
+    rgba(0, 255, 76, 0.768) 90%
 );
 
   background-repeat: no-repeat;
