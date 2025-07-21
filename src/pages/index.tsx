@@ -1,12 +1,22 @@
-// src/pages/index.tsx
 import Head from 'next/head';
 import { useState } from 'react';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
+import LoginModal from '@/components/LoginModal';
+import ForgotPasswordModal from '@/components/ForgotPasswordModal';
+import SignupModal from '@/components/SignupModal';
+import Footer from '@/components/Footer'; // 👈 Thêm import Footer
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+
+  // Callback khi login thành công
+  const handleLoginSuccess = () => {
+    setShowLogin(false);
+    console.log('Logged in!');
+  };
 
   return (
     <>
@@ -21,46 +31,59 @@ export default function Home() {
           onShowSignup={() => setShowSignup(true)}
         />
 
-        {/* Hero Section thay thế phần Welcome cũ */}
+        {/* Hero Section */}
         <HeroSection />
 
         {/* Overlay khi mở modal */}
-        {(showLogin || showSignup) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300" />
+        {(showLogin || showSignup || showForgot) && (
+          <div
+            className="
+              fixed inset-0
+              bg-transparent         /* hoàn toàn trong suốt */
+              backdrop-blur-md       /* chỉ blur nền phía sau */
+              z-30
+              transition-opacity duration-300
+            "
+          />
         )}
 
         {/* Modal Login */}
         {showLogin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-lg relative">
-              <button
-                onClick={() => setShowLogin(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-black"
-              >
-                ✕
-              </button>
-              <h2 className="text-xl font-semibold mb-4">Login</h2>
-              <p className="text-sm text-gray-600">Login form coming soon...</p>
-            </div>
-          </div>
+          <LoginModal
+            onClose={() => setShowLogin(false)}
+            onLoginSuccess={handleLoginSuccess}
+            onForgotPassword={() => {
+              setShowLogin(false);
+              setShowForgot(true);
+            }}
+          />
         )}
 
-        {/* Modal Signup */}
+        {/* Modal Forgot Password */}
+        {showForgot && (
+          <ForgotPasswordModal
+            onClose={() => setShowForgot(false)}
+            onBackToLogin={() => {
+              setShowForgot(false);
+              setShowLogin(true);
+            }}
+          />
+        )}
+
+        {/* Modal Signup – đã thay bằng component mới */}
         {showSignup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-lg relative">
-              <button
-                onClick={() => setShowSignup(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-black"
-              >
-                ✕
-              </button>
-              <h2 className="text-xl font-semibold mb-4">Sign up</h2>
-              <p className="text-sm text-gray-600">Signup form coming soon...</p>
-            </div>
-          </div>
+          <SignupModal
+            onClose={() => setShowSignup(false)}
+            onBackToLogin={() => {
+              setShowSignup(false);
+              setShowLogin(true);
+            }}
+          />
         )}
       </main>
+
+      {/* Thêm Footer */}
+      <Footer />
     </>
   );
 }

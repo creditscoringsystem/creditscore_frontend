@@ -24,7 +24,7 @@ module.exports = {
         '"Cantarell"',
         '"Open Sans"',
       ],
-    },
+    }
     fontWeights: {
       mid: 400,
   } },

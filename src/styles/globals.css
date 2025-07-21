@@ -58,3 +58,97 @@ background: linear-gradient(
 #__next {
   height: 100%;
 }
+/* 1. Tắt nút reveal trong IE10+ và Edge */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* 2. Tắt mọi decoration (bao gồm cả eye-icon) trên Chrome/Safari */
+input[type="password"] {
+  -webkit-appearance: none; /* Chrome, Safari, newer Edge */
+  appearance: none;         /* chuẩn CSS */
+}
+@keyframes slideUp {
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  transform: translateY(2rem);
+  opacity: 0;
+  animation: slideUp 0.4s forwards;
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(2.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+.btn-primary-green {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 160px;
+  height: 44px;
+  padding: 0 32px;
+  background: #5be07f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.08rem;
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 4px 20px 0 #6bf79152, 0 1.5px 6px 0 #52d97228;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background .22s,
+    box-shadow .28s,
+    color .16s,
+    transform .14s;
+}
+.btn-primary-green:hover,
+.btn-primary-green:focus {
+  background: #6BF791;
+  box-shadow: 0 6px 30px 2px #6bf79185;
+  color: #fff;
+  transform: translateY(-1px) scale(1.025);
+}
+.btn-primary-green:active {
+  background: #6BF791;
+  box-shadow: 0 2px 12px 0 #52d9727a;
+  color: #fff;
+  transform: scale(0.97);
+}
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(2.5rem);
+    opacity: 0;
+  }
+}
+.animate-slide-out {
+  animation: slide-out 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+@keyframes scale-in {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+@keyframes scale-out {
+  from { transform: scale(1); opacity: 1; }
+  to   { transform: scale(0.88); opacity: 0; }
+}
+.animate-scale-in {
+  animation: scale-in 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
+}
+.animate-scale-out {
+  animation: scale-out 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
+}

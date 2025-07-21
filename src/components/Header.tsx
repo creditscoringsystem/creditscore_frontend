@@ -3,14 +3,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const menuItems = [
-  { id: "home", label: "Home", href: "#home" },
-  { id: "how-it-works", label: "How It Works", href: "#how-it-works" },
-  { id: "features", label: "Features", href: "#features" },
-  { id: "faqs", label: "FAQs", href: "#faqs" },
-];
+interface HeaderProps {
+  onShowLogin: () => void;
+  onShowSignup: () => void;
+}
 
-export default function Header() {
+export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLUListElement>(null);
   const [positions, setPositions] = useState<{ left: number; right: number }[]>([]);
@@ -65,12 +63,12 @@ export default function Header() {
 
         <ul
           ref={containerRef}
-          className="relative flex items-center gap-8 text-green-800 font-normal text-lg"
+          className="relative flex items-center gap-8 text-green-800 font-medium text-lg"
         >
           {menuItems.map((item, i) => (
             <li
               key={item.id}
-              className="relative z-10 cursor-pointer inline-flex items-center justify-center font-semibold"
+              className="relative z-10 cursor-pointer inline-flex items-center justify-center"
               onClick={() => setActiveIndex(i)}
             >
               <Link href={item.href} scroll={false} className="px-3">
@@ -83,13 +81,26 @@ export default function Header() {
 
       {/* Buttons */}
       <div className="flex items-center gap-4">
-        <button className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition">
+        <button
+          onClick={onShowLogin}
+          className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition"
+        >
           Login
         </button>
-        <button className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition">
+        <button
+          onClick={onShowSignup}
+          className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition"
+        >
           Sign up
         </button>
       </div>
     </header>
   );
 }
+
+const menuItems = [
+  { id: "home", label: "Home", href: "#home" },
+  { id: "how-it-works", label: "How It Works", href: "#how-it-works" },
+  { id: "features", label: "Features", href: "#features" },
+  { id: "faqs", label: "FAQs", href: "#faqs" },
+];
