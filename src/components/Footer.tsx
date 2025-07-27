@@ -3,8 +3,9 @@ import React from "react";
 const Footer: React.FC = () => (
   <footer
     className="
-      fixed left-0 bottom-0 w-full
-      bg-gradient-to-r from-[#69CA4Eed] via-[#69CA4Ecc] to-white/35
+      w-full
+      bg-gradient-to-r from-[#3E8A2F] via-[#3E8A2FCC] to-[#2E6620]/50
+
       backdrop-blur-xl shadow-xl z-40
       text-white transition-all
       "
@@ -16,12 +17,12 @@ const Footer: React.FC = () => (
   >
     <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row md:items-start items-center md:justify-between relative">
       {/* Hiệu ứng blur trắng dưới logo+brand */}
-      <div className="absolute -left-80 -top-10 md:top-[10%] -translate-y-1/2 md:translate-y-[-20%] pointer-events-none z-0"
+      <div className="absolute -left-80 -top-10 md:top-[10%] -translate-y-1/2 md:translate-y-[-20%] pointer-events-none -z-1"
            style={{
              width: 500, height: 150,
              filter: "blur(50px)",
              opacity: 0.5,
-             background: "white",
+             background: "#38ad21ff",
              borderRadius: "50%",
            }} />
 
@@ -31,7 +32,7 @@ const Footer: React.FC = () => (
     <img src="/logo.svg" alt="Credit Scoring System Logo" className="h-10 w-auto" />
     <span className="font-semibold text-lg text-white">Credit Scoring System</span>
   </div>
-  <span className="text-xs font-semibold text-white mt-2 ml-13">
+  <span className="text-xs font-normal text-white mt-2 ml-13">
     Unlock your credit potential with confidence.
   </span>
 </div>

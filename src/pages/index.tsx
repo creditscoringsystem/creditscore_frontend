@@ -1,21 +1,23 @@
-import Head from 'next/head';
-import { useState } from 'react';
-import Header from '@/components/Header';
-import HeroSection from '@/components/HeroSection';
-import LoginModal from '@/components/LoginModal';
-import ForgotPasswordModal from '@/components/ForgotPasswordModal';
-import SignupModal from '@/components/SignupModal';
-import Footer from '@/components/Footer'; // 👈 Thêm import Footer
+import Head from "next/head";
+import { useState } from "react";
+import Header from "@/components/Header";
+import LoginModal from "@/components/LoginModal";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
+import SignupModal from "@/components/SignupModal";
+import Footer from "@/components/Footer";
+
+// ✨ import cấu hình sections
+import { sections } from "@/configs/sectionsConfig";
+
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
-  // Callback khi login thành công
   const handleLoginSuccess = () => {
     setShowLogin(false);
-    console.log('Logged in!');
+    console.log("Logged in!");
   };
 
   return (
@@ -24,30 +26,25 @@ export default function Home() {
         <title>Credit Scoring System</title>
       </Head>
 
-      <main className="relative min-h-screen pt-24 overflow-hidden">
-        {/* Header mới có logo, menu highlight, login/signup */}
+      <main className="relative min-h-screen pt-24">
         <Header
           onShowLogin={() => setShowLogin(true)}
           onShowSignup={() => setShowSignup(true)}
         />
 
-        {/* Hero Section */}
-        <HeroSection />
+        {/* ✨ Map qua sections để render */}
+        <div className="bg-[linear-gradient(to-bottom,transparent_0%,rgba(169,255,99,0.877)_30%,rgba(97,221,97,0.9)_60%,rgba(0,255,76,0.768)_90%)]">
+          {sections.map(({ id, Component }) => (
+            <section key={id} id={id} className="scroll-mt-[6rem]">
+              <Component />
+            </section>
+          ))}
+        </div>
 
-        {/* Overlay khi mở modal */}
         {(showLogin || showSignup || showForgot) && (
-          <div
-            className="
-              fixed inset-0
-              bg-transparent         /* hoàn toàn trong suốt */
-              backdrop-blur-md       /* chỉ blur nền phía sau */
-              z-30
-              transition-opacity duration-300
-            "
-          />
+          <div className="fixed inset-0 bg-transparent backdrop-blur-md z-30 transition-opacity duration-300" />
         )}
 
-        {/* Modal Login */}
         {showLogin && (
           <LoginModal
             onClose={() => setShowLogin(false)}
@@ -58,8 +55,6 @@ export default function Home() {
             }}
           />
         )}
-
-        {/* Modal Forgot Password */}
         {showForgot && (
           <ForgotPasswordModal
             onClose={() => setShowForgot(false)}
@@ -69,8 +64,6 @@ export default function Home() {
             }}
           />
         )}
-
-        {/* Modal Signup – đã thay bằng component mới */}
         {showSignup && (
           <SignupModal
             onClose={() => setShowSignup(false)}
@@ -82,7 +75,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Thêm Footer */}
       <Footer />
     </>
   );

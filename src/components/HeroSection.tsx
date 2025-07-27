@@ -9,8 +9,10 @@ export default function HeroSection() {
         relative
         w-full max-w-6xl mx-auto
         grid grid-cols-1 md:grid-cols-2 items-center gap-8
-        py-16 px-6
+        pt-12 pb-12 px-6          /* giảm padding dọc */
+        mt-6 md:mt-10             /* đẩy khối Hero xuống */
         overflow-visible
+        
       "
     >
       {/* ─────────────────────────────────────────────── Vector9 curve */}
@@ -19,7 +21,7 @@ export default function HeroSection() {
         alt=""
         width={600}
         height={400}
-        className="absolute -top-20 -left-83 h-auto pointer-events-none z-0"
+        className="absolute -top-23 -left-83 h-auto pointer-events-none z-0"
       />
 
       {/* ───────────────────────────────────────── Ellipse2 blur */}
@@ -63,8 +65,7 @@ export default function HeroSection() {
           alt=""
           width={520}
           height={520}
-          className="absolute transform right-[60rem] md:right-[11rem] top-[10%] md:top-[70%] translate-y-[-36%] -z-10"
-
+          className="absolute transform right-[60rem] md:right-[11rem] top-[8%] md:top-[60%] translate-y-[-45%] -z-10"
         />
         {/* credit card */}
         <Image
@@ -75,6 +76,7 @@ export default function HeroSection() {
           className="absolute right-[0.7rem] top-1/2 -translate-y-[35%] rotate-6 z-20"
         />
       </div>
+       <div className="h-[200px] w-full"></div> 
     </section>
   );
 }

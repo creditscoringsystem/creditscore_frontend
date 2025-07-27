@@ -1,7 +1,9 @@
-// src/components/Header.tsx
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { sections } from "@/configs/sectionsConfig";
+
 
 interface HeaderProps {
   onShowLogin: () => void;
@@ -9,7 +11,19 @@ interface HeaderProps {
 }
 
 export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
+  const menuItems = sections;
+
+  const activeId = useScrollSpy(menuItems.map((item) => item.id), 80);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const newIndex = menuItems.findIndex((item) => item.id === activeId);
+    if (newIndex !== -1) {
+      setActiveIndex(newIndex);
+    }
+  }, [activeId, menuItems]);
+
+  const headerRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLUListElement>(null);
   const [positions, setPositions] = useState<{ left: number; right: number }[]>([]);
 
@@ -18,13 +32,13 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
     const ul = containerRef.current;
     const ulWidth = ul.clientWidth;
     const items = Array.from(ul.children) as HTMLElement[];
-    const pos = items.map(el => {
-      const left = el.offsetLeft;
-      const width = el.offsetWidth;
-      const right = ulWidth - (left + width);
-      return { left, right };
-    });
-    setPositions(pos);
+    setPositions(
+      items.map((el) => {
+        const left = el.offsetLeft;
+        const right = ulWidth - (left + el.offsetWidth);
+        return { left, right };
+      })
+    );
   };
 
   useLayoutEffect(() => {
@@ -39,7 +53,10 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
   }, [activeIndex]);
 
   return (
-    <header className="w-full fixed top-6 left-0 z-50 flex justify-center items-center gap-6 px-6">
+    <header
+      ref={headerRef}
+      className="w-full fixed top-6 left-0 z-50 flex justify-center items-center gap-6 px-6"
+    >
       {/* Logo */}
       <div className="flex items-center gap-3">
         <Image src="/logo.svg" alt="Logo" width={48} height={48} />
@@ -48,10 +65,9 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
         </span>
       </div>
 
-      {/* Menu */}
+      {/* Nav */}
       <div className="relative rounded-full bg-white/40 backdrop-blur-sm shadow-sm h-12 flex items-center px-4">
-        {/* Highlight pill */}
-        {positions.length > 0 && (
+        {positions.length > 0 && activeIndex >= 0 && (
           <span
             className="absolute top-0 bottom-0 m-auto h-12 rounded-full bg-white/60 transition-all duration-300"
             style={{
@@ -60,18 +76,13 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
             }}
           />
         )}
-
         <ul
           ref={containerRef}
           className="relative flex items-center gap-8 text-green-800 font-medium text-lg"
         >
-          {menuItems.map((item, i) => (
-            <li
-              key={item.id}
-              className="relative z-10 cursor-pointer inline-flex items-center justify-center"
-              onClick={() => setActiveIndex(i)}
-            >
-              <Link href={item.href} scroll={false} className="px-3">
+          {menuItems.map((item) => (
+            <li key={item.id} className="relative z-10">
+              <Link href={`#${item.id}`} className="px-3 cursor-pointer">
                 {item.label}
               </Link>
             </li>
@@ -83,13 +94,13 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
       <div className="flex items-center gap-4">
         <button
           onClick={onShowLogin}
-          className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition"
+          className="h-12 px-8 rounded-full border-2 border-white text-white font-semibold hover:bg-white hover:text-black transition"
         >
           Login
         </button>
         <button
           onClick={onShowSignup}
-          className="h-12 px-8 rounded-full border-2 border-white text-white text-base font-semibold hover:bg-white hover:text-black transition"
+          className="h-12 px-8 rounded-full border-2 border-white text-white font-semibold hover:bg-white hover:text-black transition"
         >
           Sign up
         </button>
@@ -97,10 +108,3 @@ export default function Header({ onShowLogin, onShowSignup }: HeaderProps) {
     </header>
   );
 }
-
-const menuItems = [
-  { id: "home", label: "Home", href: "#home" },
-  { id: "how-it-works", label: "How It Works", href: "#how-it-works" },
-  { id: "features", label: "Features", href: "#features" },
-  { id: "faqs", label: "FAQs", href: "#faqs" },
-];

@@ -4,8 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* rồi đến @import font và các style custom của bạn */
-
 /* Biến theme mặc định */
 :root {
   --background: #ffffff;
@@ -33,22 +31,30 @@ html,
 body {
   padding: 0;
   margin: 0;
-  height: 100%;
+  /* Bỏ height: 100%; để body có thể mở rộng theo nội dung */
+  min-height: 100vh;  
+  scroll-padding-top: 4.5rem;
 }
 
-/* Body style hợp nhất (cập nhật mới) */
+/* Bật smooth-scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Body style hợp nhất */
 body {
   @apply font-sans;
-background: linear-gradient(
-  50deg,
-  rgba(212, 255, 235, 0.04) 30%,
-  rgba(169, 255, 99, 0.877) 60%,
-  rgba(97, 221, 97, 0.9) 75%,
-    rgba(0, 255, 76, 0.768) 90%
-);
 
-  background-repeat: no-repeat;
+  /* Gradient phủ toàn trang, cố định khi scroll */
+  background: linear-gradient(
+    50deg,
+    rgba(212, 255, 235, 0.04) 30%,
+    rgba(169, 255, 99, 0.877) 60%,
+    rgba(97, 221, 97, 0.9) 75%,
+    rgba(0, 255, 76, 0.768) 90% 90%
+  ) no-repeat fixed;
   background-size: cover;
+
   color: var(--foreground);
   font-family: 'M PLUS 1', Arial, Helvetica, sans-serif;
 }
@@ -56,8 +62,10 @@ background: linear-gradient(
 /* Hỗ trợ Next.js hoặc React root */
 #root,
 #__next {
-  height: 100%;
+  /* Bỏ height:100% để không giới hạn chiều cao */
+  min-height: 100vh;
 }
+
 /* 1. Tắt nút reveal trong IE10+ và Edge */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
@@ -66,9 +74,11 @@ input[type="password"]::-ms-clear {
 
 /* 2. Tắt mọi decoration (bao gồm cả eye-icon) trên Chrome/Safari */
 input[type="password"] {
-  -webkit-appearance: none; /* Chrome, Safari, newer Edge */
-  appearance: none;         /* chuẩn CSS */
+  -webkit-appearance: none;
+  appearance: none;
 }
+
+/* Animations */
 @keyframes slideUp {
   to { transform: translateY(0); opacity: 1; }
 }
@@ -77,19 +87,40 @@ input[type="password"] {
   opacity: 0;
   animation: slideUp 0.4s forwards;
 }
+
 @keyframes slide-in {
-  from {
-    transform: translateX(2.5rem);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(2.5rem); opacity: 0; }
+  to   { transform: translateX(0);      opacity: 1; }
 }
 .animate-slide-in {
   animation: slide-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
+
+@keyframes slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(2.5rem); opacity: 0; }
+}
+.animate-slide-out {
+  animation: slide-out 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.animate-scale-in {
+  animation: scale-in 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
+}
+
+@keyframes scale-out {
+  from { transform: scale(1); opacity: 1; }
+  to   { transform: scale(0.88); opacity: 0; }
+}
+.animate-scale-out {
+  animation: scale-out 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
+}
+
+/* Button chủ đạo */
 .btn-primary-green {
   display: inline-flex;
   justify-content: center;
@@ -116,39 +147,16 @@ input[type="password"] {
 .btn-primary-green:focus {
   background: #6BF791;
   box-shadow: 0 6px 30px 2px #6bf79185;
-  color: #fff;
   transform: translateY(-1px) scale(1.025);
 }
 .btn-primary-green:active {
   background: #6BF791;
   box-shadow: 0 2px 12px 0 #52d9727a;
-  color: #fff;
   transform: scale(0.97);
 }
-@keyframes slide-out {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(2.5rem);
-    opacity: 0;
-  }
-}
-.animate-slide-out {
-  animation: slide-out 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-}
-@keyframes scale-in {
-  from { transform: scale(0.88); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-@keyframes scale-out {
-  from { transform: scale(1); opacity: 1; }
-  to   { transform: scale(0.88); opacity: 0; }
-}
-.animate-scale-in {
-  animation: scale-in 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
-}
-.animate-scale-out {
-  animation: scale-out 0.36s cubic-bezier(.55,1.1,.48,1.01) forwards;
+/* tailwind.css extra */
+@layer utilities {
+  @keyframes pulse-small { 0%,100%{transform:scale(1)}50%{transform:scale(1.15)} }
+  .animate-pulse-small { animation:pulse-small 8s ease-in-out infinite; }
+  .animate-pulse-slower { animation:pulse-small 12s ease-in-out infinite; }
 }

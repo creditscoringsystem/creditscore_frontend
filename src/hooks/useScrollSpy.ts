@@ -1,3 +1,4 @@
+// src/hooks/useScrollSpy.ts
 import { useEffect, useState } from 'react';
 
 export const useScrollSpy = (ids: string[], offset = 100) => {
@@ -13,8 +14,8 @@ export const useScrollSpy = (ids: string[], offset = 100) => {
         });
       },
       {
-        rootMargin: `-${offset}px 0px -60% 0px`,
-        threshold: 0.1,
+        rootMargin: `-${offset}px 0px -20% 0px`, // tinh chỉnh để top section dễ nhận
+        threshold: 0.5,
       }
     );
 
@@ -25,6 +26,17 @@ export const useScrollSpy = (ids: string[], offset = 100) => {
 
     return () => observer.disconnect();
   }, [ids, offset]);
+
+  // 🏷️ Bắt sự kiện scroll để khi ở top thì luôn là Home
+  useEffect(() => {
+    const handleTop = () => {
+      if (window.scrollY < 10) {
+        setActiveId(ids[0]); // ép về Home
+      }
+    };
+    window.addEventListener('scroll', handleTop);
+    return () => window.removeEventListener('scroll', handleTop);
+  }, [ids]);
 
   return activeId;
 };
