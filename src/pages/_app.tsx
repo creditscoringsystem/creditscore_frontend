@@ -1,10 +1,18 @@
 // src/pages/_app.tsx
-import "@/styles/globals.css";
+
+import '@/styles/globals.css';
 import type { AppProps } from "next/app";
 import Head from "next/head";
-import { M_PLUS_1 } from "next/font/google";
+import { useRouter } from "next/router";
+import { SurveyProvider } from "@/contexts/SurveyContext";
+import AppLayout from "@/components/ui/AppLayout";
+import { Poppins, M_PLUS_1 } from "next/font/google";
 
-// Tích hợp font Google qua next/font (tối ưu hơn link thô)
+const poppins = Poppins({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 const mplus1 = M_PLUS_1({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
@@ -12,15 +20,19 @@ const mplus1 = M_PLUS_1({
 });
 
 export default function App({ Component, pageProps }: AppProps) {
+  const { pathname } = useRouter();
+  const isDashboard = pathname.startsWith('/dashboard');
+
+  const content = <Component {...pageProps} />;
+
   return (
-    <>
+    <SurveyProvider>
       <Head>
-        {/* Nếu sau này cần meta, favicon,... thêm ở đây */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <main className={mplus1.className}>
-        <Component {...pageProps} />
+      <main className={`${mplus1.className} ${isDashboard ? '' : poppins.className}`}>  
+        {isDashboard ? <AppLayout>{content}</AppLayout> : content}
       </main>
-    </>
+    </SurveyProvider>
   );
 }

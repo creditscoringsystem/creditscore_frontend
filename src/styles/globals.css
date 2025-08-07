@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -154,9 +157,71 @@ input[type="password"] {
   box-shadow: 0 2px 12px 0 #52d9727a;
   transform: scale(0.97);
 }
+
+/* ————————————— */
+/* Phần thêm từ styles/globals.css */
+/* ————————————— */
+
+@layer base {
+  /* Reset & Global */
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Inter, sans-serif;
+  }
+  * {
+    box-sizing: border-box;
+    line-height: normal;
+    font-family: inherit;
+    margin: unset;
+  }
+
+  /* Theme Variables from dashboard */
+  :root {
+    --color-background: #FFFFFF;
+    --color-foreground: #1A1A1A;
+    --color-border: #E5E5E5;
+    --color-input: #F8F9FA;
+    --color-primary: #00FF88;
+    --color-primary-foreground: #0F0F0F;
+    /* ... thêm các biến còn lại ... */
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .shadow-elevation-1 {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .shadow-elevation-2 {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+  }
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(0,255,136,0.3), 0 0 20px rgba(0,255,136,0.2);
+  }
+  .neon-text-glow {
+    text-shadow: 0 0 5px rgba(0,255,136,0.5);
+  }
+  .neon-border-glow {
+    border: 1px solid rgba(0,255,136,0.3);
+    box-shadow: 0 0 10px rgba(0,255,136,0.1);
+  }
+  /* ... các class tùy chỉnh khác ... */
+}
+
 /* tailwind.css extra */
 @layer utilities {
-  @keyframes pulse-small { 0%,100%{transform:scale(1)}50%{transform:scale(1.15)} }
-  .animate-pulse-small { animation:pulse-small 8s ease-in-out infinite; }
-  .animate-pulse-slower { animation:pulse-small 12s ease-in-out infinite; }
+  @keyframes pulse-small {
+    0%,100% { transform: scale(1) }
+    50%     { transform: scale(1.15) }
+  }
+  .animate-pulse-small {
+    animation: pulse-small 8s ease-in-out infinite;
+  }
+  .animate-pulse-slower {
+    animation: pulse-small 12s ease-in-out infinite;
+  }
 }
