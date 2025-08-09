@@ -3,9 +3,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
+import Icon from '@/components/AppIcon';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 /* ------------ Kiểu dữ liệu ------------ */
 interface FormData {

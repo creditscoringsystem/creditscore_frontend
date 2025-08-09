@@ -1,12 +1,14 @@
 // components/alert/AlertFeed.tsx
-// Next.js + TypeScript – GIỮ NGUYÊN layout & class Tailwind
+// Next.js + TypeScript – design đẹp + đầy đủ hành vi
 
-import React, { useState } from 'react';
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import Icon from '@/components/AppIcon';
 
-/* ---------- kiểu dữ liệu ---------- */
+/* ---------- kiểu dữ liệu nguyên bản ---------- */
 export type Severity = 'high' | 'medium' | 'low' | 'info';
-
 export type AlertType =
   | 'score_change'
   | 'new_account'
@@ -28,232 +30,324 @@ export interface AlertItem {
   recommendation?: string;
 }
 
-/* ---------- props ---------- */
 interface AlertFeedProps {
   alerts: AlertItem[];
 }
 
+/* ---------- palette ép cứng ---------- */
+const C = {
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  fg: '#0F172A',
+  muted: '#6B7280',
+  neon: '#12F7A0',
+  shadow: '0 8px 24px rgba(15,23,42,0.06)',
+  track: '#F5F7FA',
+};
+
+const sevPillCls = (s: Severity) => {
+  switch (s) {
+    case 'high':
+      return 'text-[#EF4444] bg-[rgba(239,68,68,0.12)]';
+    case 'medium':
+      return 'text-[#F59E0B] bg-[rgba(245,158,11,0.14)]';
+    case 'low':
+      return 'text-[#10B981] bg-[rgba(16,185,129,0.12)]';
+    case 'info':
+    default:
+      return 'text-[#12F7A0] bg-[rgba(18,247,160,0.14)]';
+  }
+};
+
+const iconRing = (s: Severity) => {
+  switch (s) {
+    case 'high':
+      return 'ring-1 ring-[rgba(239,68,68,0.25)]';
+    case 'medium':
+      return 'ring-1 ring-[rgba(245,158,11,0.25)]';
+    case 'low':
+      return 'ring-1 ring-[rgba(16,185,129,0.25)]';
+    case 'info':
+    default:
+      return 'ring-1 ring-[rgba(18,247,160,0.25)]';
+  }
+};
+
+const typeIcon = (t: AlertType) => {
+  switch (t) {
+    case 'score_change':
+      return 'TrendingUp';
+    case 'new_account':
+      return 'Plus';
+    case 'payment_due':
+      return 'Clock';
+    case 'utilization':
+      return 'CreditCard';
+    case 'inquiry':
+      return 'Search';
+    default:
+      return 'Bell';
+  }
+};
+
+const timeAgo = (ts: string | Date) => {
+  const now = new Date();
+  const t = new Date(ts);
+  const diffM = Math.max(0, Math.floor((now.getTime() - t.getTime()) / 60000));
+  if (diffM < 60) return `${diffM}m ago`;
+  if (diffM < 1440) return `${Math.floor(diffM / 60)}h ago`;
+  return `${Math.floor(diffM / 1440)}d ago`;
+};
+
 /* ---------- component ---------- */
 const AlertFeed: React.FC<AlertFeedProps> = ({ alerts }) => {
-  const [expandedAlert, setExpandedAlert] = useState<string | number | null>(
-    null,
+  // copy local để thao tác UI (mark read, dismiss, reveal)
+  const [items, setItems] = useState<AlertItem[]>(alerts);
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
+  const [visibleCount, setVisibleCount] = useState<number>(
+    Math.min(3, alerts.length),
   );
 
-  /* helper -------------------------------------------------- */
-  const getSeverityColor = (sev: Severity | undefined) => {
-    switch (sev) {
-      case 'high':
-        return 'text-destructive bg-destructive/10 border-destructive/20';
-      case 'medium':
-        return 'text-warning bg-warning/10 border-warning/20';
-      case 'low':
-        return 'text-accent bg-accent/10 border-accent/20';
-      case 'info':
-        return 'text-primary bg-primary/10 border-primary/20';
-      default:
-        return 'text-muted-foreground bg-muted/10 border-border';
+  // nếu props đổi -> đồng bộ lại state + reset visibleCount về 3
+  useEffect(() => {
+    setItems(alerts);
+    setVisibleCount(Math.min(3, alerts.length));
+    setExpandedId(null);
+  }, [alerts]);
+
+  const unreadCount = useMemo(
+    () => items.filter(a => !a.read).length,
+    [items],
+  );
+
+  const displayed = useMemo(
+    () => items.slice(0, visibleCount),
+    [items, visibleCount],
+  );
+
+  /* ---------- actions ---------- */
+  const mark = (id: string | number, action: 'mark_read' | 'dismiss' | 'resolve') => {
+    if (action === 'mark_read') {
+      setItems(prev => prev.map(a => (a.id === id ? { ...a, read: true } : a)));
+    } else if (action === 'dismiss') {
+      setItems(prev => {
+        const next = prev.filter(a => a.id !== id);
+        // giữ visibleCount hợp lệ
+        return next;
+      });
+      setVisibleCount(v => v > 0 ? Math.min(v, items.length - 1) : 0);
+      if (expandedId === id) setExpandedId(null);
+    } else {
+      // resolve: tuỳ nghiệp vụ; demo log
+      console.log(`Alert ${id}: resolve`);
     }
-  };
-
-  const getTypeIcon = (type: AlertType) => {
-    switch (type) {
-      case 'score_change':
-        return 'TrendingUp';
-      case 'new_account':
-        return 'Plus';
-      case 'payment_due':
-        return 'Clock';
-      case 'utilization':
-        return 'CreditCard';
-      case 'inquiry':
-        return 'Search';
-      default:
-        return 'Bell';
-    }
-  };
-
-  const formatTimeAgo = (ts: string | Date) => {
-    const now = new Date();
-    const t = new Date(ts);
-    const diffM = Math.floor((now.getTime() - t.getTime()) / 60000);
-
-    if (diffM < 60) return `${diffM}m ago`;
-    if (diffM < 1440) return `${Math.floor(diffM / 60)}h ago`;
-    return `${Math.floor(diffM / 1440)}d ago`;
-  };
-
-  /* actions ------------------------------------------------- */
-  const handleAlertAction = (id: string | number, action: string) => {
-    // TODO – call API hoặc context
-    console.log(`Alert ${id}: ${action}`);
   };
 
   const toggleExpanded = (id: string | number) =>
-    setExpandedAlert(expandedAlert === id ? null : id);
+    setExpandedId(expandedId === id ? null : id);
 
-  /* render -------------------------------------------------- */
+  const toggleViewMore = () => {
+    if (visibleCount < items.length) {
+      setVisibleCount(items.length);
+    } else {
+      setVisibleCount(Math.min(3, items.length));
+      setExpandedId(null);
+    }
+  };
+
   return (
-    <section className="bg-card rounded-lg border border-border shadow-elevation-1">
-      {/* header */}
-      <header className="p-6 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Recent Alerts
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Latest notifications and updates
-            </p>
-          </div>
+    <section
+      className="rounded-2xl border overflow-hidden"
+      style={{ background: C.card, borderColor: C.border, boxShadow: C.shadow }}
+    >
+      {/* Header */}
+      <header
+        className="px-6 py-5 border-b flex items-center justify-between"
+        style={{ borderColor: C.border }}
+      >
+        <div>
+          <h3 className="text-[18px] font-semibold" style={{ color: C.fg }}>
+            Recent Alerts
+          </h3>
+          <p className="text-sm" style={{ color: C.muted }}>
+            Latest notifications and updates
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {alerts.filter(a => !a.read).length} unread
-            </span>
-            <button className="text-primary hover:text-primary/80 transition">
-              <Icon name="Settings" size={16} />
-            </button>
-          </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs" style={{ color: C.muted }}>
+            {unreadCount} unread
+          </span>
+
+          {/* Settings -> link thẳng */}
+          <Link
+            href="/dashboard/alert-management-dashboard"
+            className="p-2 rounded-lg hover:opacity-80"
+            style={{ background: C.track, color: C.fg }}
+            aria-label="Alert settings"
+          >
+            <Icon name="Settings" size={16} />
+          </Link>
         </div>
       </header>
 
-      {/* list */}
+      {/* List */}
       <div className="max-h-96 overflow-y-auto">
-        {alerts.length === 0 ? (
-          <div className="p-6 text-center">
-            <Icon
-              name="Bell"
-              size={32}
-              className="text-muted-foreground mx-auto mb-3"
-            />
-            <p className="text-muted-foreground">No recent alerts</p>
+        {items.length === 0 ? (
+          <div className="p-8 text-center">
+            <Icon name="Bell" size={28} className="mx-auto mb-3" style={{ color: C.muted }} />
+            <p className="text-sm" style={{ color: C.muted }}>
+              No recent alerts
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {alerts.map(alert => (
-              <div
-                key={alert.id}
-                className={`p-4 hover:bg-muted/50 transition ${
-                  !alert.read ? 'bg-primary/5' : ''
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* icon */}
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center border ${getSeverityColor(
-                      alert.severity,
-                    )}`}
-                  >
-                    <Icon name={getTypeIcon(alert.type)} size={16} />
-                  </div>
-
-                  {/* content */}
-                  <div className="flex-1 min-w-0">
-                    {/* title row */}
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-sm font-medium text-foreground truncate">
-                        {alert.title}
-                      </h4>
-                      <div className="flex items-center gap-2 ml-2">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getSeverityColor(
-                            alert.severity,
-                          )}`}
-                        >
-                          {alert.severity}
-                        </span>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatTimeAgo(alert.timestamp)}
-                        </span>
-                      </div>
+          <ul className="divide-y" style={{ borderColor: C.border }}>
+            {displayed.map(a => {
+              const isOpen = expandedId === a.id;
+              return (
+                <li
+                  key={a.id}
+                  className={`group px-5 py-4 transition-colors ${
+                    !a.read ? 'bg-[rgba(18,247,160,0.05)]' : 'bg-white'
+                  } hover:bg-[rgba(15,23,42,0.015)]`}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* icon */}
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconRing(
+                        a.severity,
+                      )} bg-white`}
+                    >
+                      <Icon
+                        name={typeIcon(a.type)}
+                        size={18}
+                        className={
+                          a.severity === 'high'
+                            ? 'text-[#EF4444]'
+                            : a.severity === 'medium'
+                            ? 'text-[#F59E0B]'
+                            : a.severity === 'low'
+                            ? 'text-[#10B981]'
+                            : 'text-[#12F7A0]'
+                        }
+                      />
                     </div>
 
-                    {/* message preview */}
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                      {alert.message}
-                    </p>
+                    {/* content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-[15px] font-semibold truncate" style={{ color: C.fg }}>
+                          {a.title}
+                        </h4>
 
-                    {/* expanded details */}
-                    {expandedAlert === alert.id && alert.details && (
-                      <div className="mt-3 p-3 bg-muted/30 rounded-lg">
-                        <p className="text-sm text-foreground">
-                          {alert.details}
-                        </p>
-                        {alert.recommendation && (
-                          <div className="mt-2 p-2 bg-accent/10 rounded border-l-2 border-accent">
-                            <p className="text-sm">
-                              <strong>Recommendation:</strong>{' '}
-                              {alert.recommendation}
-                            </p>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`px-2 py-1 rounded-full text-[11px] font-medium ${sevPillCls(
+                              a.severity,
+                            )}`}
+                          >
+                            {a.severity}
+                          </span>
+                          <span className="text-xs" style={{ color: C.muted }}>
+                            {timeAgo(a.timestamp)}
+                          </span>
+                        </div>
                       </div>
-                    )}
 
-                    {/* actions */}
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-2">
-                        {alert.actionable && (
-                          <>
+                      <p className="mt-1 text-sm line-clamp-2" style={{ color: C.muted }}>
+                        {a.message}
+                      </p>
+
+                      {/* details */}
+                      {isOpen && (a.details || a.recommendation) && (
+                        <div
+                          className="mt-3 rounded-lg p-3"
+                          style={{ background: C.track, border: `1px solid ${C.border}` }}
+                        >
+                          {a.details && (
+                            <p className="text-sm" style={{ color: C.fg }}>
+                              {a.details}
+                            </p>
+                          )}
+                          {a.recommendation && (
+                            <div className="mt-2 pl-3 border-l-2" style={{ borderColor: C.neon }}>
+                              <p className="text-sm">
+                                <span className="font-medium" style={{ color: C.fg }}>
+                                  Recommendation:
+                                </span>{' '}
+                                {a.recommendation}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* actions row */}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {a.actionable && (
                             <button
-                              onClick={() =>
-                                handleAlertAction(alert.id, 'resolve')
-                              }
-                              className="text-xs text-primary hover:text-primary/80 transition"
+                              onClick={() => mark(a.id, 'resolve')}
+                              className="text-xs font-medium hover:opacity-80"
+                              style={{ color: C.neon }}
                             >
                               Take Action
                             </button>
-                            <span className="text-xs text-muted-foreground">
-                              •
-                            </span>
-                          </>
-                        )}
+                          )}
 
-                        <button
-                          onClick={() => toggleExpanded(alert.id)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition"
-                        >
-                          {expandedAlert === alert.id
-                            ? 'Show Less'
-                            : 'Show More'}
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        {!alert.read && (
                           <button
-                            onClick={() =>
-                              handleAlertAction(alert.id, 'mark_read')
-                            }
-                            className="text-xs text-muted-foreground hover:text-foreground transition"
+                            onClick={() => toggleExpanded(a.id)}
+                            className="text-xs hover:opacity-80"
+                            style={{ color: C.muted }}
+                            aria-expanded={isOpen}
                           >
-                            Mark as Read
+                            {isOpen ? 'Show Less' : 'Show More'}
                           </button>
-                        )}
-                        <button
-                          onClick={() =>
-                            handleAlertAction(alert.id, 'dismiss')
-                          }
-                          className="text-muted-foreground hover:text-foreground transition"
-                        >
-                          <Icon name="X" size={14} />
-                        </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {!a.read && (
+                            <button
+                              onClick={() => mark(a.id, 'mark_read')}
+                              className="text-xs hover:opacity-80"
+                              style={{ color: C.muted }}
+                            >
+                              Mark as Read
+                            </button>
+                          )}
+                          <button
+                            onClick={() => mark(a.id, 'dismiss')}
+                            className="p-1 rounded-md hover:bg-[rgba(15,23,42,0.04)]"
+                            aria-label="Dismiss"
+                          >
+                            <Icon name="X" size={14} className="align-middle" style={{ color: C.muted }} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
 
-      {/* footer */}
-      <footer className="p-4 border-t border-border">
-        <button className="w-full text-sm font-medium text-primary hover:text-primary/80 transition">
-          View All Alerts
-        </button>
-      </footer>
+      {/* Footer – View more / less */}
+      {items.length > 3 && (
+        <footer
+          className="px-4 py-4 border-t text-center"
+          style={{ borderColor: C.border, background: '#FAFAFB' }}
+        >
+          <button
+            className="text-sm font-semibold hover:opacity-90"
+            style={{ color: C.neon }}
+            onClick={toggleViewMore}
+          >
+            {visibleCount < items.length ? 'View More Alerts' : 'Show Less'}
+          </button>
+        </footer>
+      )}
     </section>
   );
 };

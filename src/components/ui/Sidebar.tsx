@@ -1,126 +1,112 @@
+// src/components/ui/Sidebar.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import React, { useEffect } from 'react';
 import Icon from '@/components/AppIcon';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
-type NavItem = {
-  label: string;
-  path: string;
-  icon: string;
-  description: string;
-};
+type NavItem = { label: string; path: string; icon: string; description: string };
 
-const Sidebar: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
 
-  const navigationItems: NavItem[] = [
-    { label: 'Overview',  path: '/dashboard/credit-score-overview-dashboard',      icon: 'BarChart3', description: 'Credit score monitoring and trends' },
-    { label: 'Analysis',  path: '/dashboard/credit-factor-analysis-dashboard',    icon: 'PieChart',    description: 'Factor breakdown and insights' },
-    { label: 'Simulator', path: '/dashboard/what-if-scenario-simulator-dashboard', icon: 'Calculator',  description: 'What-if scenario modeling' },
-    { label: 'Alerts',    path: '/dashboard/alert-management-dashboard',          icon: 'Bell',        description: 'Notification management' },
-    { label: 'Settings',  path: '/dashboard/settings-dashboard',                  icon: 'Settings',    description: 'Application preferences' },
-    { label: 'Profile',   path: '/dashboard/profile-management-dashboard',        icon: 'User',        description: 'User profile management' },
-    { label: 'Help',      path: '/dashboard/help-dashboard',                      icon: 'HelpCircle',  description: 'Support and documentation' }
+  const items: NavItem[] = [
+    { label: 'Overview',  path: '/dashboard/credit-score-overview-dashboard',       icon: 'BarChart3',  description: 'Credit score monitoring and trends' },
+    { label: 'Analysis',  path: '/dashboard/credit-factor-analysis-dashboard',      icon: 'PieChart',   description: 'Factor breakdown and insights' },
+    { label: 'Simulator', path: '/dashboard/what-if-scenario-simulator-dashboard',  icon: 'Calculator', description: 'What-if scenario modeling' },
+    { label: 'Alerts',    path: '/dashboard/alert-management-dashboard',            icon: 'Bell',       description: 'Notification management' },
+    { label: 'Settings',  path: '/dashboard/settings-dashboard',                    icon: 'Settings',   description: 'Application preferences' },
+    { label: 'Profile',   path: '/dashboard/profile-management-dashboard',          icon: 'User',       description: 'User profile management' },
+    { label: 'Help',      path: '/dashboard/help-dashboard',                        icon: 'HelpCircle', description: 'Support and documentation' },
   ];
 
-  const isActivePath = (path: string) => router.pathname === path;
-  const handleNavigation = (path: string) => void router.push(path);
+  const isActive = (p: string) => router.pathname === p;
+  const go = (p: string) => { router.push(p); onClose(); };
+
+  // Khóa scroll khi mở
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
 
   return (
-    <motion.aside
-      initial={{ width: 280 }}
-      animate={{ width: isCollapsed ? 80 : 280 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 bottom-0 z-40 bg-card border-r border-border shadow-elevation-2 flex flex-col"
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between h-20 px-6 border-b border-border">
-        <AnimatePresence mode="wait">
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center space-x-3"
-            >
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center neon-glow">
-                <Icon name="TrendingUp" size={24} color="#0F0F0F" strokeWidth={2.5} />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-xl font-semibold text-foreground">CreditScore</h1>
-                <span className="text-sm text-muted-foreground font-medium">Analytics</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-smooth"
+    <AnimatePresence>
+      {isOpen && (
+        // LAYER chứa mọi thứ của sidebar – lớp độc lập, không đẩy layout
+        <motion.div
+          key="sidebar-layer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] pointer-events-none"
+          aria-hidden={!isOpen}
         >
-          <Icon name={isCollapsed ? 'ChevronRight' : 'ChevronLeft'} size={20} />
-        </button>
-      </div>
+          {/* Scrim: luôn hiển thị để bắt click ra ngoài */}
+          <div
+            className="absolute inset-0 bg-black/40 pointer-events-auto"
+            onClick={onClose}
+          />
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 overflow-auto">
-        <div className="space-y-2">
-          {navigationItems.map(item => (
-            <motion.button
-              key={item.path}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleNavigation(item.path)}
-              className={
-                `w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-smooth ` +
-                (isActivePath(item.path)
-                  ? 'bg-primary text-primary-foreground neon-glow shadow-elevation-2'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted')
-              }
-              title={isCollapsed ? item.label : item.description}
-            >
-              <Icon
-                name={item.icon}
-                size={20}
-                className={isActivePath(item.path) ? 'drop-shadow-lg' : ''}
-              />
-              <AnimatePresence>
-                {!isCollapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.2 }}
+          {/* Drawer */}
+          <motion.aside
+            key="drawer"
+            initial={{ x: -320 }}
+            animate={{ x: 0 }}
+            exit={{ x: -320 }}
+            transition={{ type: 'tween', duration: 0.25 }}
+            role="dialog"
+            aria-modal="true"
+            className="absolute left-0 top-0 h-full w-[280px] bg-white border-r border-[#E5E7EB] shadow-elevation-2 flex flex-col pointer-events-auto"
+          >
+            {/* Brand */}
+            <div className="flex items-center justify-between h-20 px-5 border-b border-[#E5E7EB]">
+              <div className="flex flex-col">
+                <h1 className="text-xl font-semibold text-[#111827]">Credit Scoring System</h1>
+                <span className="text-sm text-[#6B7280] font-medium">Analytics</span>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-lg text-[#6B7280] hover:bg-[#F8F9FA]" aria-label="Close sidebar">
+                <Icon name="X" size={20} />
+              </button>
+            </div>
+
+            {/* Nav */}
+            <nav className="flex-1 px-4 py-6 overflow-auto">
+              <div className="space-y-2">
+                {items.map(item => (
+                  <button
+                    key={item.path}
+                    onClick={() => go(item.path)}
+                    title={item.description}
+                    className={
+                      `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition ` +
+                      (isActive(item.path)
+                        ? 'bg-[#00FF88] text-[#0F0F0F] shadow-elevation-2'
+                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F8F9FA]')
+                    }
                   >
-                    {item.label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          ))}
-        </div>
-      </nav>
+                    <Icon name={item.icon} size={20} className={isActive(item.path) ? 'drop-shadow-lg' : ''} />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-border">
-        <AnimatePresence>
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center text-xs text-muted-foreground"
-            >
+            <div className="p-4 border-t border-[#E5E7EB] text-center text-xs text-[#6B7280]">
               <div className="mb-2">Last updated</div>
-              <div className="text-primary font-mono">2&nbsp;min&nbsp;ago</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.aside>
+              <div className="text-[#00B56A] font-mono">2&nbsp;min&nbsp;ago</div>
+            </div>
+          </motion.aside>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

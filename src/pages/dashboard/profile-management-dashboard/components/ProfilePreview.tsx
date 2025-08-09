@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Icon from '../../../components/AppIcon';
+import Icon from '@/components/AppIcon';
+
 
 /* ---------- Kiểu dữ liệu ---------- */
 interface Activity {

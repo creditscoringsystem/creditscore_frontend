@@ -25,7 +25,7 @@ export default function NotificationPreferences({
   onSave,
 }: NotificationPreferencesProps) {
   const [prefs, setPrefs] = useState<PreferenceItem[]>(
-    initialPrefs.map(p => ({
+    (Array.isArray(initialPrefs) ? initialPrefs : []).map(p => ({
       ...p,
       enabled: !!p.enabled,
       score_change: p.score_change ?? 0,    // default to 0

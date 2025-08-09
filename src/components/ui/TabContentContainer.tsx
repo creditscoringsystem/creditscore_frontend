@@ -1,14 +1,51 @@
 'use client';
 
 import React, { useState, useEffect, ReactNode } from 'react';
-// ❗ Nếu bạn đang dùng Next.js, không dùng `react-router-dom`
 import { usePathname } from 'next/navigation';
 
 interface TabContentContainerProps {
   children: ReactNode;
-  tabId?: 'overview' | 'analysis' | 'simulator' | 'alerts';
+  tabId?: 'overview' | 'analysis' | 'simulator' | 'alerts' | 'settings';
   className?: string;
 }
+
+const tabConfigs = {
+  overview: {
+    title: 'Credit Score Overview',
+    description: 'Monitor your credit score trends and key metrics',
+    gridClass: 'grid-cols-1 lg:grid-cols-3 xl:grid-cols-4',
+  },
+  analysis: {
+    title: 'Factor Analysis',
+    description: 'Detailed breakdown of credit score factors',
+    gridClass: 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3',
+  },
+  simulator: {
+    title: 'Scenario Simulator',
+    description: 'Model what-if scenarios for credit improvement',
+    gridClass: 'grid-cols-1 lg:grid-cols-2',
+  },
+  alerts: {
+    title: 'Alert Management',
+    description: 'Manage notifications and monitoring preferences',
+    gridClass: 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3',
+  },
+  settings: {
+    title: 'Settings',
+    description: 'Manage your application preferences and account settings',
+    gridClass: 'grid-cols-1 lg:grid-cols-2',
+  },
+  // Nếu còn tab khác, thêm ở đây...
+};
+
+const pathToTabMap: Record<string, keyof typeof tabConfigs> = {
+  '/dashboard/credit-score-overview-dashboard': 'overview',
+  '/dashboard/credit-factor-analysis-dashboard': 'analysis',
+  '/dashboard/what-if-scenario-simulator-dashboard': 'simulator',
+  '/dashboard/alert-management-dashboard': 'alerts',
+  '/dashboard/settings-dashboard': 'settings',
+  // Thêm mapping các route khác ở đây nếu cần
+};
 
 const TabContentContainer: React.FC<TabContentContainerProps> = ({
   children,
@@ -18,37 +55,7 @@ const TabContentContainer: React.FC<TabContentContainerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
 
-  const tabConfigs = {
-    overview: {
-      title: 'Credit Score Overview',
-      description: 'Monitor your credit score trends and key metrics',
-      gridClass: 'grid-cols-1 lg:grid-cols-3 xl:grid-cols-4',
-    },
-    analysis: {
-      title: 'Factor Analysis',
-      description: 'Detailed breakdown of credit score factors',
-      gridClass: 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3',
-    },
-    simulator: {
-      title: 'Scenario Simulator',
-      description: 'Model what-if scenarios for credit improvement',
-      gridClass: 'grid-cols-1 lg:grid-cols-2',
-    },
-    alerts: {
-      title: 'Alert Management',
-      description: 'Manage notifications and monitoring preferences',
-      gridClass: 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3',
-    },
-  };
-
   const getCurrentTabId = (): keyof typeof tabConfigs => {
-    const pathToTabMap: Record<string, keyof typeof tabConfigs> = {
-      '/credit-score-overview-dashboard': 'overview',
-      '/credit-factor-analysis-dashboard': 'analysis',
-      '/what-if-scenario-simulator-dashboard': 'simulator',
-      '/alert-management-dashboard': 'alerts',
-    };
-
     return pathToTabMap[pathname] || tabId || 'overview';
   };
 
@@ -60,6 +67,20 @@ const TabContentContainer: React.FC<TabContentContainerProps> = ({
     const timer = setTimeout(() => setIsLoading(false), 150);
     return () => clearTimeout(timer);
   }, [currentTabId]);
+
+  // Nếu không tìm thấy config tab, hiển thị thông báo
+  if (!currentConfig) {
+    return (
+      <main className="pt-20 md:pt-32 pb-20 md:pb-6 px-6">
+        <div className="max-w-3xl mx-auto text-center mt-24 p-10 border-2 border-green-100 rounded-xl">
+          <h2 className="text-3xl font-bold text-red-500 mb-6">Tab Not Found</h2>
+          <p>
+            Route <span className="font-semibold text-black">{pathname}</span> chưa được mapping trong <b>tabConfigs</b>.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -13,8 +13,11 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"],
+      "@styles/*": ["styles/*"],            // <--- thêm dòng này!
+      "@components/*": ["components/*"]     // <--- và dòng này nếu muốn gọi @components
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

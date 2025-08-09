@@ -3,8 +3,8 @@
 
 import React, { useState, useRef, ChangeEvent, DragEvent } from 'react';
 import { motion } from 'framer-motion';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
+import Icon from '@/components/AppIcon';
+import Button from '@/components/ui/Button';
 
 /* ---------- Kiểu dữ liệu ---------- */
 interface PresetAvatar {

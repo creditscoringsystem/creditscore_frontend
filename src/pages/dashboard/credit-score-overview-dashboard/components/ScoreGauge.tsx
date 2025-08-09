@@ -1,183 +1,139 @@
-// components/overview/ScoreGauge.tsx
-// TypeScript-ready, UI giữ nguyên.
+'use client';
 
 import React from 'react';
 import Icon from '@/components/AppIcon';
 
-/* ---------- types ---------- */
 type RiskLevel = 'Excellent' | 'Good' | 'Fair' | 'Poor' | string;
 
 interface ScoreGaugeProps {
-  score: number;          // current score 300-850
-  previousScore: number;  // last known score
-  percentile: number;     // e.g. 83
+  score: number;
+  previousScore: number;
+  percentile: number;
   riskLevel: RiskLevel;
+  size?: 'md' | 'lg'; // NEW
 }
 
-/* ---------- component ---------- */
 const ScoreGauge: React.FC<ScoreGaugeProps> = ({
   score,
   previousScore,
   percentile,
   riskLevel,
+  size = 'md',
 }) => {
-  /* helpers -------------------------------------------------- */
-  const getScoreColor = (val: number) =>
-    val >= 740 ? 'text-success' : val >= 670 ? 'text-warning' : 'text-destructive';
+  const scoreColor = (v: number) =>
+    v >= 740 ? '#00FF88' : v >= 670 ? '#FFB020' : '#FF3B57';
 
-  const getRiskLevelColor = (lvl: RiskLevel) => {
-    switch (lvl) {
-      case 'Excellent':
-        return 'bg-success text-success-foreground neon-glow';
-      case 'Good':
-        return 'bg-accent text-accent-foreground neon-glow';
-      case 'Fair':
-        return 'bg-warning text-warning-foreground';
-      case 'Poor':
-        return 'bg-destructive text-destructive-foreground';
-      default:
-        return 'bg-muted text-muted-foreground';
+  const badgeClass = (() => {
+    switch (riskLevel) {
+      case 'Excellent': return 'bg-[#00FF88] text-[#0F0F0F]';
+      case 'Good':      return 'bg-[#00FF88] text-[#0F0F0F]';
+      case 'Fair':      return 'bg-[#FFB020] text-white';
+      case 'Poor':      return 'bg-[#FF3B57] text-white';
+      default:          return 'bg-[#F3F4F6] text-[#6B7280]';
     }
-  };
+  })();
 
   const change = score - previousScore;
-  const scoreChange = {
-    value: Math.abs(change),
-    isPositive: change > 0,
-    isNeutral: change === 0,
-  };
+  const isNeutral = change === 0;
+  const isPositive = change > 0;
 
-  /* gauge maths ---------------------------------------------- */
-  const radius = 90;
-  const circumference = Math.PI * radius; // semicircle
-  const strokeDashoffset =
-    circumference - ((score - 300) / (850 - 300)) * circumference;
+  const pct = Math.max(0, Math.min(1, (score - 300) / (850 - 300)));
+  const dashTotal = 100;
 
-  /* render ---------------------------------------------------- */
+  const cardBase =
+    'rounded-xl border border-[#E5E7EB] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06),0_6px_18px_rgba(0,0,0,0.04)] p-6 transition-transform hover:-translate-y-0.5';
+
+  const svgClass =
+    size === 'lg'
+      ? 'w-[520px] max-w-full h-[290px]'
+      : 'w-[420px] max-w-full h-[240px]';
+
+  const gaugeMinH = size === 'lg' ? 'min-h-[270px]' : 'min-h-[230px]';
+
   return (
-    <section className="bg-card rounded-lg border border-border p-6 shadow-elevation-2 hover-lift">
-      {/* header */}
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Credit Score</h3>
-        <span
-          className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskLevelColor(
-            riskLevel,
-          )}`}
-        >
+    <section className={cardBase}>
+      <div className="flex items-center justify-between mb-7">
+        <h3 className="text-lg font-semibold text-[#0F172A]">Credit Score</h3>
+        <span className={`px-10 py-3 rounded-full text-sm font-semibold ${badgeClass}`}>
           {riskLevel}
         </span>
       </div>
 
-      {/* gauge */}
-      <div className="relative flex items-center justify-center mb-6">
-        <div className="relative">
-          <svg className="w-64 h-32" viewBox="0 0 200 100">
-            {/* track */}
-            <path
-              d="M 20 90 A 80 80 0 0 1 180 90"
-              stroke="currentColor"
-              strokeWidth="8"
-              fill="none"
-              className="text-muted opacity-20"
-            />
-            {/* progress */}
-            <path
-              d="M 20 90 A 80 80 0 0 1 180 90"
-              stroke="currentColor"
-              strokeWidth="8"
-              fill="none"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className={`transition-all duration-1000 ease-out ${getScoreColor(
-                score,
-              )} drop-shadow-lg`}
-              style={{
-                filter: 'drop-shadow(0 0 8px rgba(0,255,136,0.6))',
-              }}
-            />
-            {/* tick labels */}
-            <g className="text-xs text-muted-foreground">
-              <text x="20" y="95" textAnchor="middle" className="fill-current">
-                300
-              </text>
-              <text x="60" y="20" textAnchor="middle" className="fill-current">
-                580
-              </text>
-              <text x="100" y="15" textAnchor="middle" className="fill-current">
-                670
-              </text>
-              <text x="140" y="20" textAnchor="middle" className="fill-current">
-                740
-              </text>
-              <text x="180" y="95" textAnchor="middle" className="fill-current">
-                850
-              </text>
-            </g>
-          </svg>
+      <div className={`relative flex items-center justify-center mb-6 ${gaugeMinH}`}>
+        <svg className={svgClass} viewBox="0 0 260 160" aria-hidden="true">
+          <path
+            d="M 30 130 A 100 100 0 0 1 230 130"
+            fill="none"
+            stroke="#E5E7EB"
+            strokeWidth="12"
+            pathLength={dashTotal}
+            strokeDasharray={dashTotal}
+            strokeLinecap="round"
+          />
+          <path
+            d="M 30 130 A 100 100 0 0 1 230 130"
+            fill="none"
+            stroke={scoreColor(score)}
+            strokeWidth="12"
+            pathLength={dashTotal}
+            strokeDasharray={dashTotal}
+            strokeDashoffset={dashTotal - pct * dashTotal}
+            strokeLinecap="round"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(0,255,136,0.45))' }}
+          />
+          <g fontSize="12" fill="#6B7280">
+            <text x="30"  y="144" textAnchor="middle">300</text>
+            <text x="80"  y="42"  textAnchor="middle">580</text>
+            <text x="130" y="30"  textAnchor="middle">670</text>
+            <text x="180" y="42"  textAnchor="middle">740</text>
+            <text x="230" y="144" textAnchor="middle">850</text>
+          </g>
+        </svg>
 
-          {/* centre readout */}
-          <div className="absolute inset-0 flex flex-col items-center justify-end pb-4">
-            <span className={`text-4xl font-bold ${getScoreColor(score)}`}>
-              {score}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 pointer-events-none">
+          <span className="text-[47px] font-extrabold leading-none" style={{ color: scoreColor(score) }}>
+            {score}
+          </span>
+          <span className="text-sm text-[#6B7280]">FICO Score</span>
+          <div className="flex items-center mt-2">
+            {!isNeutral && (
+              <Icon
+                name={isPositive ? 'TrendingUp' : 'TrendingDown'}
+                size={16}
+                className={isPositive ? 'text-[#00FF88]' : 'text-[#FF3B57]'}
+              />
+            )}
+            <span
+              className={`text-sm ml-2 ${
+                isNeutral ? 'text-[#6B7280]' : isPositive ? 'text-[#00FF88]' : 'text-[#FF3B57]'
+              }`}
+            >
+              {isNeutral ? 'No change' : `${isPositive ? '+' : '-'}${Math.abs(change)} pts`}
             </span>
-            <span className="text-sm text-muted-foreground">FICO Score</span>
-
-            {/* change */}
-            <div className="flex items-center mt-2">
-              {!scoreChange.isNeutral && (
-                <Icon
-                  name={scoreChange.isPositive ? 'TrendingUp' : 'TrendingDown'}
-                  size={16}
-                  className={scoreChange.isPositive ? 'text-success' : 'text-destructive'}
-                />
-              )}
-              <span
-                className={`text-sm ml-1 ${
-                  scoreChange.isNeutral
-                    ? 'text-muted-foreground'
-                    : scoreChange.isPositive
-                    ? 'text-success'
-                    : 'text-destructive'
-                }`}
-              >
-                {scoreChange.isNeutral
-                  ? 'No change'
-                  : `${scoreChange.isPositive ? '+' : '-'}${scoreChange.value} pts`}
-              </span>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* percentile */}
-      <div className="text-center mb-6">
-        <span className="text-2xl font-semibold text-foreground mb-1 block">
+      <div className="text-center mb-8">
+        <span className="block text-2xl font-semibold text-[#0F172A] mb-1">
           {percentile}th percentile
         </span>
-        <p className="text-sm text-muted-foreground">
-          Better than {percentile}% of consumers
-        </p>
+        <p className="text-sm text-[#6B7280]">Better than {percentile}% of consumers</p>
       </div>
 
-      {/* legend */}
       <div className="space-y-2">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Poor</span>
-          <span>Fair</span>
-          <span>Good</span>
-          <span>Excellent</span>
+        <div className="flex justify-between text-xs text-[#6B7280]">
+          <span>Poor</span><span>Fair</span><span>Good</span><span>Excellent</span>
         </div>
         <div
-          className="h-2 bg-gradient-to-r from-destructive via-warning via-accent to-success rounded-full shadow-lg"
-          style={{ filter: 'drop-shadow(0 0 4px rgba(0,255,136,0.3))' }}
+          className="h-4 rounded-full shadow"
+          style={{
+            background: 'linear-gradient(90deg, #FF3B57 0%, #FFB020 40%, #00FF88 100%)',
+            filter: 'drop-shadow(0 0 4px rgba(0,255,136,0.25))',
+          }}
         />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>300</span>
-          <span>580</span>
-          <span>670</span>
-          <span>740</span>
-          <span>850</span>
+        <div className="flex justify-between text-xs text-[#6B7280]">
+          <span>300</span><span>580</span><span>670</span><span>740</span><span>850</span>
         </div>
       </div>
     </section>

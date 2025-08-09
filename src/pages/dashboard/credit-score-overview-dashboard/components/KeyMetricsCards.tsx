@@ -1,154 +1,117 @@
-// components/overview/KeyMetricsCards.tsx
-// TypeScript – bố cục & Tailwind giữ nguyên.
+'use client';
 
 import React from 'react';
 import Icon from '@/components/AppIcon';
 
-/* ---------- types ---------- */
 interface Metrics {
-  monthlyChange: number;       // (+/-) points
-  utilizationRate: number;     // %
-  utilizationChange: number;   // +/- %
-  daysSinceUpdate: number;     // số ngày (0 = today)
+  monthlyChange: number;
+  utilizationRate: number;
+  utilizationChange: number;
+  daysSinceUpdate: number;
 }
-
 interface KeyMetricsCardsProps {
   metrics: Metrics;
+  stacked?: boolean; // NEW
 }
 
-/* ---------- component ---------- */
-const KeyMetricsCards: React.FC<KeyMetricsCardsProps> = ({ metrics }) => {
-  /* helpers -------------------------------------------------- */
-  const getChangeColor = (val: number) =>
-    val > 0
-      ? 'text-success'
-      : val < 0
-      ? 'text-destructive'
-      : 'text-muted-foreground';
+const KeyMetricsCards: React.FC<KeyMetricsCardsProps> = ({ metrics, stacked }) => {
+  const changeColor = (v: number) =>
+    v > 0 ? 'text-[#00FF88]' : v < 0 ? 'text-[#FF3B57]' : 'text-[#6B7280]';
+  const changeIcon = (v: number) => (v > 0 ? 'TrendingUp' : v < 0 ? 'TrendingDown' : 'Minus');
+  const formatDays = (d: number) => (d === 0 ? 'Today' : d === 1 ? '1 day ago' : `${d} days ago`);
 
-  const getChangeIcon = (val: number) =>
-    val > 0 ? 'TrendingUp' : val < 0 ? 'TrendingDown' : 'Minus';
+  const cardBase =
+    'rounded-xl border border-[#E5E7EB] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06),0_6px_18px_rgba(0,0,0,0.04)] p-6';
 
-  const formatUtilization = (rate: number) => `${rate}%`;
+  const Wrapper: React.FC<{children: React.ReactNode}> = ({ children }) => (
+    <div className={stacked ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-3 gap-6'}>
+      {children}
+    </div>
+  );
 
-  const formatDays = (d: number) =>
-    d === 0 ? 'Today' : d === 1 ? '1 day ago' : `${d} days ago`;
-
-  /* render --------------------------------------------------- */
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* 1 ─ Monthly change */}
-      <div className="bg-card rounded-lg border border-border p-6 shadow-elevation-1">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Icon name="Calendar" size={20} className="text-primary" />
-            </div>
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Monthly Change
-            </h3>
+    <Wrapper>
+      {/* Monthly change */}
+      <div className={cardBase}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-[#00FF88]/10 flex items-center justify-center">
+            <Icon name="Calendar" size={20} className="text-[#00FF88]" />
           </div>
+          <h3 className="text-sm font-medium text-[#6B7280]">Monthly Change</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-foreground">
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-extrabold text-[#0F172A]">
             {metrics.monthlyChange > 0 ? '+' : ''}
             {metrics.monthlyChange}
           </span>
-          <div
-            className={`flex items-center ${getChangeColor(
-              metrics.monthlyChange,
-            )}`}
-          >
-            <Icon name={getChangeIcon(metrics.monthlyChange)} size={16} />
+          <span className={`flex items-center ${changeColor(metrics.monthlyChange)}`}>
+            <Icon name={changeIcon(metrics.monthlyChange)} size={16} />
             <span className="text-sm ml-1">points</span>
-          </div>
+          </span>
         </div>
-
-        <p className="text-sm text-muted-foreground mt-2">vs. last month</p>
+        <p className="text-sm text-[#6B7280] mt-2">vs. last month</p>
       </div>
 
-      {/* 2 ─ Utilization */}
-      <div className="bg-card rounded-lg border border-border p-6 shadow-elevation-1">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-              <Icon name="CreditCard" size={20} className="text-accent" />
-            </div>
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Credit Utilization
-            </h3>
+      {/* Utilization */}
+      <div className={cardBase}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-[#00C2FF]/10 flex items-center justify-center">
+            <Icon name="CreditCard" size={20} className="text-[#00C2FF]" />
           </div>
+          <h3 className="text-sm font-medium text-[#6B7280]">Credit Utilization</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-foreground">
-            {formatUtilization(metrics.utilizationRate)}
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-extrabold text-[#0F172A]">
+            {metrics.utilizationRate}%
           </span>
-          <div
-            className={`flex items-center ${getChangeColor(
-              metrics.utilizationChange,
-            )}`}
-          >
-            <Icon name={getChangeIcon(metrics.utilizationChange)} size={16} />
-            <span className="text-sm ml-1">
-              {Math.abs(metrics.utilizationChange)}%
-            </span>
-          </div>
+          <span className={`flex items-center ${changeColor(metrics.utilizationChange)}`}>
+            <Icon name={changeIcon(metrics.utilizationChange)} size={16} />
+            <span className="text-sm ml-1">{Math.abs(metrics.utilizationChange)}%</span>
+          </span>
         </div>
 
-        {/* bar */}
         <div className="mt-3">
-          <div className="w-full bg-muted rounded-full h-2">
+          <div className="w-full h-2 rounded-full bg-[#F1F5F9]">
             <div
               className={`h-2 rounded-full transition-all duration-500 ${
-                metrics.utilizationRate <= 30
-                  ? 'bg-success'
-                  : metrics.utilizationRate <= 50
-                  ? 'bg-warning'
-                  : 'bg-destructive'
+                metrics.utilizationRate <= 30 ? 'bg-[#00FF88]' :
+                metrics.utilizationRate <= 50 ? 'bg-[#FFB020]' : 'bg-[#FF3B57]'
               }`}
               style={{ width: `${Math.min(metrics.utilizationRate, 100)}%` }}
             />
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            Recommended:&nbsp;&lt; 30%
-          </p>
+          <p className="text-sm text-[#6B7280] mt-2">Recommended: &lt; 30%</p>
         </div>
       </div>
 
-      {/* 3 ─ Last update */}
-      <div className="bg-card rounded-lg border border-border p-6 shadow-elevation-1">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center">
-              <Icon name="RefreshCw" size={20} className="text-secondary" />
-            </div>
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Last Update
-            </h3>
+      {/* Last update */}
+      <div className={cardBase}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-[#6366F1]/10 flex items-center justify-center">
+            <Icon name="RefreshCw" size={20} className="text-[#6366F1]" />
           </div>
+          <h3 className="text-sm font-medium text-[#6B7280]">Last Update</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-foreground">
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-extrabold text-[#0F172A]">
             {metrics.daysSinceUpdate}
           </span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-[#6B7280]">
             {metrics.daysSinceUpdate === 1 ? 'day' : 'days'}
           </span>
         </div>
 
-        <p className="text-sm text-muted-foreground mt-2">
-          {formatDays(metrics.daysSinceUpdate)}
-        </p>
+        <p className="text-sm text-[#6B7280] mt-2">{formatDays(metrics.daysSinceUpdate)}</p>
 
         <div className="mt-3 flex items-center gap-2">
-          <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-          <span className="text-xs text-success">Data is current</span>
+          <span className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse" />
+          <span className="text-xs text-[#00FF88]">Data is current</span>
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 };
 

@@ -4,8 +4,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
+import Button from '@/components/ui/Button';
+import Icon from '@/components/AppIcon';
+
 
 /* ---------- Kiểu dữ liệu ---------- */
 type LinkedAccount = {

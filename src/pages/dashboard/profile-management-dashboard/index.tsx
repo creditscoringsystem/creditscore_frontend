@@ -5,10 +5,10 @@ import React, { useEffect, useState } from 'react';
 
 import Sidebar from '@/components/ui/Sidebar';
 import Header from '@/components/ui/Header';
-import ProfileHeader from '@/app/(dashboard)/profile/components/ProfileHeader';
-import PersonalInfoForm from '@/app/(dashboard)/profile/components/PersonalInfoForm';
-import AccountLinking from '@/app/(dashboard)/profile/components/AccountLinking';
-import ProfilePreview from '@/app/(dashboard)/profile/components/ProfilePreview';
+import ProfileHeader from './components/ProfileHeader';
+import PersonalInfoForm from './components/PersonalInfoForm';
+import AccountLinking from './components/AccountLinking';
+import ProfilePreview from './components/ProfilePreview';
 
 /* -------------------------------------------------- */
 /*                    Component                       */

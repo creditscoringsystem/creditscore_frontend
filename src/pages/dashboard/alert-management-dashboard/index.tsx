@@ -1,5 +1,4 @@
-// app/(dashboards)/alert-management-dashboard/page.tsx
-// Next.js 13+ (app router) + TypeScript
+// src/pages/dashboard/alert-management-dashboard/index.tsx
 // — original UI, data & logic kept the same —
 
 'use client';
