@@ -1,3 +1,5 @@
+// This file is part of the Credit Scoring UI project.
+// src/components/ui/ImpactSummaryCards.tsx
 'use client';
 
 import React from 'react';
@@ -12,7 +14,6 @@ interface Scenario {
 }
 
 type ColorKey = 'success' | 'warning' | 'destructive' | 'muted-foreground';
-
 type TrendKey = 'up' | 'down' | 'neutral';
 
 interface Impact {
@@ -29,13 +30,46 @@ interface Impact {
 
 interface ImpactSummaryCardsProps {
   currentScenario?: Scenario | null;
-  projectedResults?: any;
+  projectedResults?: any; // reserved
 }
+
+/* ===== Local palette (fallback) ===== */
+const C = {
+  card: 'var(--color-card, #FFFFFF)',
+  border: 'var(--color-border, #E5E7EB)',
+  fg: 'var(--color-foreground, #0F172A)',
+  muted: 'var(--color-muted-foreground, #6B7280)',
+  shadow: '0 6px 24px rgba(15,23,42,0.06)',
+};
+
+const accent = (k: ColorKey) => {
+  switch (k) {
+    case 'success':
+      return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
+    case 'warning':
+      return { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' };
+    case 'destructive':
+      return { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' };
+    default:
+      return { text: 'text-muted-foreground', bg: 'bg-slate-50', border: 'border-border' };
+  }
+};
+
+const trendIconOf = (t: TrendKey) => (t === 'up' ? 'TrendingUp' : t === 'down' ? 'TrendingDown' : 'Minus');
+const trendTextOf = (t: TrendKey) =>
+  t === 'up' ? 'text-emerald-600' : t === 'down' ? 'text-rose-600' : 'text-muted-foreground';
+
+/* Fallback để luôn có số liệu */
+const FALLBACK_SCENARIO: Scenario = {
+  paymentAmount: 250,
+  utilizationChange: -15,
+  newAccounts: 0,
+  payoffTimeline: 12,
+  creditLimit: 5000,
+};
 
 export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCardsProps) {
   const calculateImpacts = (scenario: Scenario): Impact[] => {
-    if (!scenario) return [];
-
     const baseScore = 720;
     const paymentImpact = (scenario.paymentAmount / 100) * 2.5;
     const utilizationImpact = Math.abs(scenario.utilizationChange) * 1.2;
@@ -53,7 +87,7 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         impact: Math.round(paymentImpact),
         description: `Additional $${scenario.paymentAmount}/month payment`,
         color: paymentImpact > 0 ? 'success' : 'muted-foreground',
-        trend: paymentImpact > 0 ? 'up' : 'neutral'
+        trend: paymentImpact > 0 ? 'up' : 'neutral',
       },
       {
         id: 'utilization',
@@ -63,10 +97,10 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         projectedValue: `${Math.max(10, 65 + scenario.utilizationChange)}%`,
         impact: Math.round(utilizationImpact),
         description: `${scenario.utilizationChange > 0 ? 'Increase' : 'Decrease'} by ${Math.abs(
-          scenario.utilizationChange
+          scenario.utilizationChange,
         )}%`,
         color: scenario.utilizationChange < 0 ? 'success' : 'destructive',
-        trend: scenario.utilizationChange < 0 ? 'up' : 'down'
+        trend: scenario.utilizationChange < 0 ? 'up' : 'down',
       },
       {
         id: 'newCredit',
@@ -75,11 +109,9 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         currentValue: '2',
         projectedValue: 2 + scenario.newAccounts,
         impact: Math.round(newAccountImpact),
-        description: `${scenario.newAccounts} new account${
-          scenario.newAccounts !== 1 ? 's' : ''
-        }`,
+        description: `${scenario.newAccounts} new account${scenario.newAccounts !== 1 ? 's' : ''}`,
         color: scenario.newAccounts === 0 ? 'success' : 'destructive',
-        trend: scenario.newAccounts === 0 ? 'neutral' : 'down'
+        trend: scenario.newAccounts === 0 ? 'neutral' : 'down',
       },
       {
         id: 'payoff',
@@ -90,7 +122,7 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         impact: Math.round(payoffImpact),
         description: `Complete payoff in ${scenario.payoffTimeline} months`,
         color: scenario.payoffTimeline <= 12 ? 'success' : 'warning',
-        trend: scenario.payoffTimeline <= 12 ? 'up' : 'neutral'
+        trend: scenario.payoffTimeline <= 12 ? 'up' : 'neutral',
       },
       {
         id: 'creditLimit',
@@ -101,7 +133,7 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         impact: Math.round(creditLimitImpact),
         description: `$${scenario.creditLimit.toLocaleString()} limit increase`,
         color: scenario.creditLimit > 0 ? 'success' : 'muted-foreground',
-        trend: scenario.creditLimit > 0 ? 'up' : 'neutral'
+        trend: scenario.creditLimit > 0 ? 'up' : 'neutral',
       },
       {
         id: 'overall',
@@ -109,149 +141,111 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         icon: 'BarChart3',
         currentValue: '720',
         projectedValue: Math.round(
-          baseScore + paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact
+          baseScore + paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact,
         ),
-        impact: Math.round(
-          paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact
-        ),
+        impact: Math.round(paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact),
         description: 'Combined effect of all changes',
         color:
           paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0
             ? 'success'
             : 'destructive',
         trend:
-          paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0
-            ? 'up'
-            : 'down'
-      }
+          paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0 ? 'up' : 'down',
+      },
     ];
   };
 
-  const impacts = currentScenario ? calculateImpacts(currentScenario) : [];
+  const impacts = calculateImpacts(currentScenario ?? FALLBACK_SCENARIO);
 
-  const getColorClasses = (color: ColorKey) => {
-    switch (color) {
-      case 'success':
-        return 'text-success bg-success/10 border-success/20';
-      case 'warning':
-        return 'text-warning bg-warning/10 border-warning/20';
-      case 'destructive':
-        return 'text-destructive bg-destructive/10 border-destructive/20';
-      default:
-        return 'text-muted-foreground bg-muted/10 border-border';
-    }
-  };
-
-  const getTrendIcon = (trend: TrendKey) => {
-    switch (trend) {
-      case 'up':
-        return 'TrendingUp';
-      case 'down':
-        return 'TrendingDown';
-      default:
-        return 'Minus';
-    }
-  };
-
-  const getTrendColor = (trend: TrendKey) => {
-    switch (trend) {
-      case 'up':
-        return 'text-success';
-      case 'down':
-        return 'text-destructive';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
-  if (!currentScenario) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Array.from({ length: 6 }).map((_, idx) => (
-          <div
-            key={idx}
-            className="bg-card border border-border rounded-lg p-6 animate-pulse"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-8 h-8 bg-muted rounded-lg"></div>
-              <div className="w-6 h-6 bg-muted rounded"></div>
-            </div>
-            <div className="space-y-2">
-              <div className="w-24 h-4 bg-muted rounded"></div>
-              <div className="w-16 h-6 bg-muted rounded"></div>
-              <div className="w-32 h-3 bg-muted rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
+  /* ===== DỌC 1 CỘT: giống Progress Timeline ===== */
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {impacts.map((impact) => (
-        <div
-          key={impact.id}
-          className={`bg-card border rounded-lg p-6 transition-smooth hover:shadow-elevation-2 ${
-            getColorClasses(impact.color)
-          }`}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className={`${getColorClasses(impact.color)} w-10 h-10 rounded-lg flex items-center justify-center`}>
-                <Icon name={impact.icon} size={20} className={impact.color === 'muted-foreground' ? 'text-muted-foreground' : ''} />
-              </div>
-              <h4 className="text-sm font-semibold text-foreground">{impact.title}</h4>
-            </div>
-            <Icon name={getTrendIcon(impact.trend)} size={20} className={getTrendColor(impact.trend)} />
-          </div>
+    <div className="space-y-4">
+      {impacts.map((impact) => {
+        const ac = accent(impact.color);
+        const showBar = impact.id === 'overall';
 
-          {/* Values */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Current</span>
-              <span className="text-sm font-medium text-foreground">{impact.currentValue}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Projected</span>
-              <span className={`text-sm font-semibold ${impact.color}`}>{impact.projectedValue}</span>
-            </div>
-            <div className="pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Impact</span>
-                <div className="flex items-center space-x-1">
-                  <span className={`text-sm font-bold ${getTrendColor(impact.trend)}`}>{impact.impact > 0 ? `+${impact.impact}` : impact.impact}</span>
-                  {impact.id !== 'overall' && <span className="text-xs text-muted-foreground">pts</span>}
+        return (
+          <div
+            key={impact.id}
+            className="rounded-2xl border px-5 py-4 flex items-center justify-between"
+            style={{ background: C.card, borderColor: C.border, boxShadow: C.shadow }}
+          >
+            {/* Left block: icon + title + meta */}
+            <div className="flex items-start gap-4 min-w-0">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${ac.bg} ${ac.border} border`}>
+                <Icon name={impact.icon} size={20} className={ac.text} />
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-base font-semibold truncate" style={{ color: C.fg }}>
+                  {impact.title}
                 </div>
+
+                <div className="mt-1 grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs" style={{ color: C.muted }}>
+                      Current
+                    </div>
+                    <div className="font-medium" style={{ color: C.fg }}>
+                      {impact.currentValue}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs" style={{ color: C.muted }}>
+                      Projected
+                    </div>
+                    <div className={`font-semibold ${ac.text}`}>{impact.projectedValue}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs" style={{ color: C.muted }}>
+                      Impact
+                    </div>
+                    <div className={`font-bold ${trendTextOf(impact.trend)}`}>
+                      {impact.impact > 0 ? `+${impact.impact}` : impact.impact}
+                      {impact.id !== 'overall' && ' pts'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* description / progress */}
+                {!showBar ? (
+                  <p className="mt-2 text-xs" style={{ color: C.muted }}>
+                    {impact.description}
+                  </p>
+                ) : (
+                  <div className="mt-3">
+                    <div className="w-full rounded-full h-2 bg-slate-100" role="progressbar" aria-valuemin={-50} aria-valuemax={50}>
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          impact.impact > 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.abs(impact.impact) * 2)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+                      <span>0</span>
+                      <span>+50 pts</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="mt-4 pt-3 border-t border-border">
-            <p className="text-xs text-muted-foreground">{impact.description}</p>
-          </div>
-
-          {/* Progress Bar for Overall Impact */}
-          {impact.id === 'overall' && (
-            <div className="mt-4">
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    impact.impact > 0 ? 'bg-success' : 'bg-destructive'
-                  }`}
-                  style={{ width: `${Math.min(100, Math.abs(impact.impact) * 2)}%` }}
-                />
+            {/* Right block: trend icon + big value (giống ô số ở timeline) */}
+            <div className="ml-6 text-right shrink-0">
+              <Icon name={trendIconOf(impact.trend)} size={18} className={`mx-auto ${trendTextOf(impact.trend)} mb-1`} />
+              <div className="text-2xl font-bold" style={{ color: C.fg }}>
+                {impact.id === 'overall' ? impact.projectedValue : impact.projectedValue}
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>0</span>
-                <span>+50 pts</span>
-              </div>
+              {impact.id === 'overall' && (
+                <div className="text-xs" style={{ color: C.muted }}>
+                  projected
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

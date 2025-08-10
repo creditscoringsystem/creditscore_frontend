@@ -16,14 +16,13 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
 
+  // Removed: Alerts & Settings
   const items: NavItem[] = [
-    { label: 'Overview',  path: '/dashboard/credit-score-overview-dashboard',       icon: 'BarChart3',  description: 'Credit score monitoring and trends' },
-    { label: 'Analysis',  path: '/dashboard/credit-factor-analysis-dashboard',      icon: 'PieChart',   description: 'Factor breakdown and insights' },
-    { label: 'Simulator', path: '/dashboard/what-if-scenario-simulator-dashboard',  icon: 'Calculator', description: 'What-if scenario modeling' },
-    { label: 'Alerts',    path: '/dashboard/alert-management-dashboard',            icon: 'Bell',       description: 'Notification management' },
-    { label: 'Settings',  path: '/dashboard/settings-dashboard',                    icon: 'Settings',   description: 'Application preferences' },
-    { label: 'Profile',   path: '/dashboard/profile-management-dashboard',          icon: 'User',       description: 'User profile management' },
-    { label: 'Help',      path: '/dashboard/help-dashboard',                        icon: 'HelpCircle', description: 'Support and documentation' },
+    { label: 'Overview',  path: '/dashboard/credit-score-overview-dashboard',      icon: 'BarChart3',  description: 'Credit score monitoring and trends' },
+    { label: 'Analysis',  path: '/dashboard/credit-factor-analysis-dashboard',     icon: 'PieChart',   description: 'Factor breakdown and insights' },
+    { label: 'Simulator', path: '/dashboard/what-if-scenario-simulator-dashboard', icon: 'Calculator', description: 'What-if scenario modeling' },
+    { label: 'Profile',   path: '/dashboard/profile-management-dashboard',         icon: 'User',       description: 'User profile management' },
+    { label: 'Help',      path: '/dashboard/help-dashboard',                       icon: 'HelpCircle', description: 'Support and documentation' },
   ];
 
   const isActive = (p: string) => router.pathname === p;

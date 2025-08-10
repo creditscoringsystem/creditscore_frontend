@@ -1,7 +1,7 @@
 // src/pages/dashboard/what-if-scenario-simulator-dashboard/components/ScenarioComparison.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Icon from '@/components/AppIcon';
 import Button from '@/components/ui/Button';
 
@@ -39,85 +39,97 @@ export default function ScenarioComparison({
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'score'>('date');
   const [showComparison, setShowComparison] = useState(false);
 
+  /* ---------- helpers ---------- */
+  const fmtUSD = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US'); // 1/5/2025 như trong mock
+  };
+
   const generateComparisonData = (scenarios: ScenarioItem[]): ComparisonData[] =>
     scenarios.map(s => ({
       ...s,
       projectedScore: Math.round(720 + s.paymentAmount / 50 + Math.abs(s.utilizationChange) - s.newAccounts * 5),
       timeToTarget: Math.max(3, 12 - Math.floor(s.paymentAmount / 100)),
       totalCost: s.paymentAmount * 12,
-      riskLevel: s.newAccounts > 2
-        ? 'High'
-        : s.utilizationChange > 0
-          ? 'Medium'
-          : 'Low',
+      riskLevel: s.newAccounts > 2 ? 'High' : s.utilizationChange > 0 ? 'Medium' : 'Low',
     }));
 
   const handleSelect = (id: string | number) => {
     setSelectedScenarios(sel =>
-      sel.includes(id)
-        ? sel.filter(x => x !== id)
-        : sel.length < 4 ? [...sel, id] : sel
+      sel.includes(id) ? sel.filter(x => x !== id) : sel.length < 4 ? [...sel, id] : sel,
     );
   };
 
-  const sorted = [...savedScenarios].sort((a, b) => {
-    if (sortBy === 'name') return a.name.localeCompare(b.name);
-    if (sortBy === 'score') {
-      const sa = 720 + a.paymentAmount / 50 + Math.abs(a.utilizationChange);
-      const sb = 720 + b.paymentAmount / 50 + Math.abs(b.utilizationChange);
-      return sb - sa;
+  const sorted = useMemo(() => {
+    const clone = [...savedScenarios];
+    if (sortBy === 'name') clone.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === 'score') {
+      clone.sort((a, b) => {
+        const sa = 720 + a.paymentAmount / 50 + Math.abs(a.utilizationChange);
+        const sb = 720 + b.paymentAmount / 50 + Math.abs(b.utilizationChange);
+        return sb - sa;
+      });
+    } else {
+      clone.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     }
-    // date
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+    return clone;
+  }, [savedScenarios, sortBy]);
 
   const comparisonData = generateComparisonData(
-    savedScenarios.filter(s => selectedScenarios.includes(s.id))
+    savedScenarios.filter(s => selectedScenarios.includes(s.id)),
   );
 
-  const riskColor = (r: ComparisonData['riskLevel']) => {
-    if (r === 'Low') return 'text-success bg-success/10';
-    if (r === 'Medium') return 'text-warning bg-warning/10';
-    return 'text-destructive bg-destructive/10';
-  };
+  const riskColor = (r: ComparisonData['riskLevel']) =>
+    r === 'Low' ? 'text-success bg-success/10' : r === 'Medium' ? 'text-warning bg-warning/10' : 'text-destructive bg-destructive/10';
 
+  /* ---------- empty ---------- */
   if (savedScenarios.length === 0) {
     return (
-      <div className="bg-card border border-border rounded-lg shadow-elevation-1 p-8">
-        <div className="text-center space-y-4">
-          <Icon name="Bookmark" size={24} className="text-muted-foreground mx-auto" />
-          <h3 className="text-lg font-semibold text-foreground">No Saved Scenarios</h3>
-          <p className="text-sm text-muted-foreground">
-            Create and save scenarios to compare different credit improvement strategies.
-          </p>
-        </div>
+      <div className="bg-card border border-border rounded-lg shadow-elevation-1 p-10 text-center">
+        <Icon name="Bookmark" size={24} className="text-muted-foreground mx-auto mb-3" />
+        <h3 className="text-lg font-semibold text-foreground">No Saved Scenarios</h3>
+        <p className="text-sm text-muted-foreground">
+          Create and save scenarios to compare different credit improvement strategies.
+        </p>
       </div>
     );
   }
 
+  /* ---------- main ---------- */
   return (
-    <div className="bg-card border border-border rounded-lg shadow-elevation-1">
+    <section className="bg-card border border-border rounded-lg shadow-elevation-1">
       {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <Icon name="GitCompare" size={20} className="text-accent" />
+      <header className="p-6 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex w-9 h-9 rounded-xl items-center justify-center bg-accent/10">
+              <Icon name="GitCompare" size={18} className="text-accent" />
+            </span>
             <div>
               <h3 className="text-lg font-semibold text-foreground">Scenario Comparison</h3>
-              <p className="text-sm text-muted-foreground">Compare up to 4 saved scenarios</p>
+              <p className="text-sm text-muted-foreground">Compare up to 4 saved scenarios side by side</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="sort">Sort</label>
             <select
+              id="sort"
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
+              className="text-sm border border-border rounded-full px-4 py-2 bg-background text-foreground hover:border-foreground/30"
             >
               <option value="date">Sort by Date</option>
               <option value="name">Sort by Name</option>
               <option value="score">Sort by Score</option>
             </select>
-            {selectedScenarios.length >= 2 && (
+
+            {selectedScenarios.length >= 2 && !showComparison && (
               <Button
                 variant="default"
                 size="sm"
@@ -129,73 +141,115 @@ export default function ScenarioComparison({
             )}
           </div>
         </div>
-        {selectedScenarios.length > 0 && (
-          <p className="text-sm text-muted-foreground">
-            {selectedScenarios.length} of 4 selected
-          </p>
-        )}
-      </div>
 
+        {selectedScenarios.length > 0 && !showComparison && (
+          <p className="mt-2 text-sm text-muted-foreground">{selectedScenarios.length} of 4 selected</p>
+        )}
+      </header>
+
+      {/* Body */}
       <div className="p-6">
         {!showComparison ? (
           <div className="space-y-4">
-            {sorted.map(s => (
-              <div
-                key={s.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-smooth ${
-                  selectedScenarios.includes(s.id)
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-                onClick={() => handleSelect(s.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedScenarios.includes(s.id)}
-                      onChange={() => handleSelect(s.id)}
-                      className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary"
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <span className="font-medium text-foreground">{s.name}</span>
-                  </label>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm text-foreground">${s.paymentAmount}/mo</div>
-                    <div className="text-sm text-foreground">
-                      {s.utilizationChange > 0 ? '+' : ''}{s.utilizationChange}%
+            {sorted.map(s => {
+              const selected = selectedScenarios.includes(s.id);
+              const utilColor =
+                s.utilizationChange < 0
+                  ? 'text-success'
+                  : s.utilizationChange > 0
+                  ? 'text-destructive'
+                  : 'text-muted-foreground';
+
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => handleSelect(s.id)}
+                  className={[
+                    'rounded-xl border transition-smooth cursor-pointer',
+                    selected ? 'border-primary bg-primary/5 shadow-elevation-1' : 'border-border hover:border-primary/40 hover:shadow-elevation-1',
+                    'px-5 py-4',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Left: checkbox + name + created date */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => handleSelect(s.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-[18px] h-[18px] rounded border-border text-primary"
+                        aria-label={`Select ${s.name}`}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate">{s.name}</div>
+                        <div className="text-xs text-muted-foreground">Created {formatDate(s.createdAt)}</div>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Play"
-                      onClick={e => { e.stopPropagation(); onLoadScenario(s); }}
-                    >
-                      Load
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Trash2"
-                      className="text-destructive hover:text-destructive"
-                      onClick={e => { e.stopPropagation(); onDeleteScenario(s.id); }}
-                    >
-                      Delete
-                    </Button>
+
+                    {/* Right: metrics + actions */}
+                    <div className="flex items-center gap-6 shrink-0">
+                      <div className="text-right">
+                        <div className="text-[15px] font-semibold text-foreground">
+                          {fmtUSD(s.paymentAmount)}/mo
+                        </div>
+                        <div className="text-xs text-muted-foreground">Payment</div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className={`text-[15px] font-semibold ${utilColor}`}>
+                          {s.utilizationChange > 0 ? '+' : ''}
+                          {s.utilizationChange}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">Utilization</div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Play"
+                        onClick={e => {
+                          e.stopPropagation();
+                          onLoadScenario(s);
+                        }}
+                      >
+                        Load
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Trash2"
+                        className="text-destructive hover:text-destructive"
+                        onClick={e => {
+                          e.stopPropagation();
+                          const ok = window.confirm(`Delete scenario "${s.name}"?`);
+                          if (ok) onDeleteScenario(s.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
+          /* Comparison table */
           <div className="space-y-6">
-            {/* Back button */}
             <div className="flex items-center justify-between">
               <h4 className="text-base font-semibold text-foreground">Comparison</h4>
-              <Button variant="outline" size="sm" iconName="ArrowLeft" onClick={() => setShowComparison(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                iconName="ArrowLeft"
+                onClick={() => setShowComparison(false)}
+              >
                 Back
               </Button>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -227,7 +281,7 @@ export default function ScenarioComparison({
                     <td className="p-3 text-sm text-muted-foreground">Total Cost (12mo)</td>
                     {comparisonData.map(c => (
                       <td key={c.id} className="p-3 text-center text-foreground font-semibold">
-                        ${c.totalCost.toLocaleString()}
+                        {fmtUSD(c.totalCost)}
                       </td>
                     ))}
                   </tr>
@@ -245,7 +299,6 @@ export default function ScenarioComparison({
               </table>
             </div>
 
-            {/* Recommendation */}
             <div className="bg-success/5 border border-success/20 rounded-lg p-4">
               <Icon name="Award" size={20} className="text-success inline mr-2" />
               <span className="text-sm text-foreground">
@@ -255,6 +308,6 @@ export default function ScenarioComparison({
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

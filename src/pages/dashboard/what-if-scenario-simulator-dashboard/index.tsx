@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Sidebar from '@/components/ui/Sidebar';
-import Header from '@/components/ui/Header';
+import React, { useEffect, useState } from 'react';
+import DashboardShell from '@/components/layouts/DashboardShell';
 import ScenarioControlPanel, { Scenario } from './components/ScenarioControlPanel';
 import ScenarioVisualization from './components/ScenarioVisualization';
 import ResultsPanel from './components/ResultsPanel';
 import TimelineSlider from './components/TimelineSlider';
 import ImpactSummaryCards from './components/ImpactSummaryCards';
 import ScenarioComparison from './components/ScenarioComparison';
+import { CurrencyProvider, useCurrency } from './components/CurrencyContext';
 
 export default function WhatIfScenarioSimulatorDashboard() {
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
@@ -43,159 +43,129 @@ export default function WhatIfScenarioSimulatorDashboard() {
     setSavedScenarios(prev => [...prev, newScenario]);
   };
 
-  const handleTimeframeChange = (tf: number) => {
-    setSelectedTimeframe(tf);
-  };
-
-  const handlePlayAnimation = (playing: boolean) => {
-    console.log('Playing animation for timeframe:', selectedTimeframe, playing);
-  };
-
-  const handleExportResults = (data: any) => {
-    console.log('Exporting results:', data);
-  };
-
-  const handleLoadScenario = (scenario: Scenario) => {
-    setCurrentScenario(scenario);
-    handleScenarioChange(scenario);
-  };
-
-  const handleDeleteScenario = (id: number) => {
-    setSavedScenarios(prev => prev.filter(s => s.id !== id));
-  };
+  const handleTimeframeChange = (tf: number) => setSelectedTimeframe(tf);
+  const handlePlayAnimation = (playing: boolean) => { /* no-op */ };
+  const handleExportResults = (data: any) => { /* no-op */ };
+  const handleLoadScenario = (scenario: Scenario) => { setCurrentScenario(scenario); handleScenarioChange(scenario); };
+  const handleDeleteScenario = (id: number) => setSavedScenarios(prev => prev.filter(s => s.id !== id));
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
 
+  // Container chuẩn giữa + “nudge” sang trái (đồng bộ Overview/Analysis)
+  const CONTAINER = 'mx-auto max-w-[1440px] px-6'; // mở rộng container 1 chút cho thoáng
+  const NUDGE_LEFT = 'md:transform md:-translate-x-38 xl:-translate-x-30';
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex">
-        <Sidebar />
-        <div className="flex-1 ml-80">
-          <Header />
-          <main className="pt-20 px-6 py-8">
-            {/* Loading skeleton */}
-          </main>
+      <DashboardShell>
+        <div className={`${CONTAINER} ${NUDGE_LEFT}`}>
+          <div className="h-64 rounded-lg animate-pulse bg-[var(--color-muted)]" />
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar />
-      <div className="flex-1 ml-80">
-        <Header />
-        <main className="pt-20 px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-semibold text-foreground mb-2">Scenario Simulator</h1>
-              <p className="text-muted-foreground">Model what-if scenarios for credit improvement</p>
+    <DashboardShell>
+      {/* Wrap toàn bộ trang bằng CurrencyProvider */}
+      <CurrencyProvider>
+        <div className={`${CONTAINER} ${NUDGE_LEFT}`}>
+          <HeaderWithCurrencyToggle />
+
+          {/* Giữ NGUYÊN bố cục lưới & component như file gốc (layout 5-5-5) */}
+          <div className="grid gap-6 grid-cols-15">
+            {/* col 1 - 5 */}
+            <div className="col-span-15 lg:col-span-5 space-y-6">
+              <ScenarioControlPanel
+                onScenarioChange={handleScenarioChange}
+                currentScenario={currentScenario}
+                onSaveScenario={handleSaveScenario}
+                savedScenarios={savedScenarios}
+              />
+              <TimelineSlider
+                selectedTimeframe={selectedTimeframe}
+                onTimeframeChange={handleTimeframeChange}
+                onPlayAnimation={handlePlayAnimation}
+              />
             </div>
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-              <div className="hidden lg:grid lg:grid-cols-24 gap-6">
-                <div className="lg:col-span-6 space-y-6">
-                  <ScenarioControlPanel
-                    onScenarioChange={handleScenarioChange}
-                    currentScenario={currentScenario}
-                    onSaveScenario={handleSaveScenario}
-                    savedScenarios={savedScenarios}
-                  />
-                  <TimelineSlider
-                    selectedTimeframe={selectedTimeframe}
-                    onTimeframeChange={handleTimeframeChange}
-                    onPlayAnimation={handlePlayAnimation}
-                  />
-                </div>
-                <div className="lg:col-span-12 space-y-6">
-                  <ScenarioVisualization
-                    currentScenario={currentScenario}
-                    selectedTimeframe={selectedTimeframe}
-                  />
-                  <ImpactSummaryCards
-                    currentScenario={currentScenario}
-                    projectedResults={projectedResults}
-                  />
-                </div>
-                <div className="lg:col-span-6 space-y-6">
-                  <ResultsPanel
-                    currentScenario={currentScenario}
-                    projectedResults={projectedResults}
-                    onExportResults={handleExportResults}
-                  />
-                </div>
-              </div>
-              <div className="hidden md:grid lg:hidden md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <ScenarioControlPanel
-                    onScenarioChange={handleScenarioChange}
-                    currentScenario={currentScenario}
-                    onSaveScenario={handleSaveScenario}
-                    savedScenarios={savedScenarios}
-                  />
-                  <ResultsPanel
-                    currentScenario={currentScenario}
-                    projectedResults={projectedResults}
-                    onExportResults={handleExportResults}
-                  />
-                </div>
-                <div className="space-y-6">
-                  <ScenarioVisualization
-                    currentScenario={currentScenario}
-                    selectedTimeframe={selectedTimeframe}
-                  />
-                  <TimelineSlider
-                    selectedTimeframe={selectedTimeframe}
-                    onTimeframeChange={handleTimeframeChange}
-                    onPlayAnimation={handlePlayAnimation}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <ImpactSummaryCards
-                    currentScenario={currentScenario}
-                    projectedResults={projectedResults}
-                  />
-                </div>
-              </div>
-              <div className="md:hidden space-y-6">
-                <ScenarioControlPanel
-                  onScenarioChange={handleScenarioChange}
-                  currentScenario={currentScenario}
-                  onSaveScenario={handleSaveScenario}
-                  savedScenarios={savedScenarios}
-                />
-                <ScenarioVisualization
-                  currentScenario={currentScenario}
-                  selectedTimeframe={selectedTimeframe}
-                />
-                <TimelineSlider
-                  selectedTimeframe={selectedTimeframe}
-                  onTimeframeChange={handleTimeframeChange}
-                  onPlayAnimation={handlePlayAnimation}
-                />
-                <ResultsPanel
-                  currentScenario={currentScenario}
-                  projectedResults={projectedResults}
-                  onExportResults={handleExportResults}
-                />
-                <ImpactSummaryCards
-                  currentScenario={currentScenario}
-                  projectedResults={projectedResults}
-                />
-              </div>
-              <div className="lg:col-span-24 md:col-span-2 mt-8">
-                <ScenarioComparison
-                  savedScenarios={savedScenarios}
-                  onLoadScenario={handleLoadScenario}
-                  onDeleteScenario={handleDeleteScenario}
-                />
-              </div>
+
+            {/* col 2 - 5 */}
+            <div className="col-span-15 lg:col-span-5 space-y-6">
+              <ScenarioVisualization
+                currentScenario={currentScenario}
+                selectedTimeframe={selectedTimeframe}
+              />
+              <ImpactSummaryCards
+                currentScenario={currentScenario ?? {
+                  paymentAmount: 250, utilizationChange: -15, newAccounts: 0, payoffTimeline: 12, creditLimit: 5000
+                }}
+              />
+            </div>
+
+            {/* col 3 - 5 */}
+            <div className="col-span-15 lg:col-span-5 space-y-6">
+              <ResultsPanel
+                currentScenario={currentScenario}
+                projectedResults={projectedResults}
+                onExportResults={handleExportResults}
+              />
+            </div>
+
+            {/* full width */}
+            <div className="col-span-15 mt-8">
+              <ScenarioComparison
+                savedScenarios={savedScenarios}
+                onLoadScenario={handleLoadScenario}
+                onDeleteScenario={handleDeleteScenario}
+              />
             </div>
           </div>
-        </main>
+        </div>
+      </CurrencyProvider>
+    </DashboardShell>
+  );
+}
+
+/* ====== UI toggle tiền tệ ở header ====== */
+function HeaderWithCurrencyToggle() {
+  const { currency, setCurrency } = useCurrency();
+
+  return (
+    <header className="mb-8 flex items-start justify-between gap-4">
+      <div>
+        <h1 className="text-4xl font-extrabold mb-2" style={{ color: '#0F172A' }}>
+          Scenario Simulator
+        </h1>
+        <p className="text-base" style={{ color: '#374151' }}>
+          Model what-if scenarios for credit improvement
+        </p>
       </div>
-    </div>
+
+      {/* Toggle pill neon */}
+      <div
+        className="flex items-center p-1 rounded-full border"
+        style={{ borderColor: 'var(--color-border,#E5E7EB)', boxShadow: '0 6px 24px rgba(15,23,42,0.06)' }}
+      >
+        <button
+          onClick={() => setCurrency('USD')}
+          className={`px-4 h-9 rounded-full text-sm font-medium transition-all ${
+            currency === 'USD' ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]' : 'text-[var(--color-foreground,#0F172A)]'
+          }`}
+        >
+          USD
+        </button>
+        <button
+          onClick={() => setCurrency('VND')}
+          className={`px-4 h-9 rounded-full text-sm font-medium transition-all ${
+            currency === 'VND' ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]' : 'text-[var(--color-foreground,#0F172A)]'
+          }`}
+        >
+          VND
+        </button>
+      </div>
+    </header>
   );
 }

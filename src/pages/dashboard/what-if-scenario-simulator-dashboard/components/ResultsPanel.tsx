@@ -19,11 +19,16 @@ interface ScoreRange {
 }
 
 interface ProjectedResults {
-  scoreRange: ScoreRange;
-  confidenceLevel: number;
-  timeToTarget: number;
-  factorImpacts: FactorImpact[];
+  // dữ liệu gốc
+  scoreRange?: ScoreRange;
+  confidenceLevel?: number;
+  timeToTarget?: number;
+  factorImpacts?: FactorImpact[];
   monthlyProgress?: { month: number; score: number; confidence: number }[];
+  // dữ liệu rời rạc mà parent đang truyền
+  creditScoreChange?: number;
+  totalInterestSaved?: number;
+  payoffDate?: Date | string;
 }
 
 interface ResultsPanelProps {
@@ -32,14 +37,20 @@ interface ResultsPanelProps {
   onExportResults?: (data: any) => void;
 }
 
-const ResultsPanel: React.FC<ResultsPanelProps> = ({
-  currentScenario,
-  projectedResults,
-  onExportResults,
-}) => {
-  const [showDetails, setShowDetails] = useState(true);
+/* ========= helpers ========= */
+const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+const monthsBetween = (to?: Date | string) => {
+  if (!to) return undefined;
+  const d = typeof to === 'string' ? new Date(to) : to;
+  if (Number.isNaN(d.getTime())) return undefined;
+  const now = new Date();
+  return Math.max(0, (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth()));
+};
 
-  const results: ProjectedResults = projectedResults ?? {
+/** Hợp nhất dữ liệu truyền vào (có thể thiếu) với default an toàn */
+const buildSafeResults = (raw?: ProjectedResults): Required<ProjectedResults> => {
+  // default “đẹp” để hiển thị
+  const defaults: Required<ProjectedResults> = {
     scoreRange: { min: 725, max: 775, target: 750 },
     confidenceLevel: 85,
     timeToTarget: 10,
@@ -56,7 +67,45 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
       { month: 6, score: 755, confidence: 86 },
       { month: 12, score: 750, confidence: 85 },
     ],
+    creditScoreChange: 0,
+    totalInterestSaved: 0,
+    payoffDate: undefined as unknown as Date, // sẽ không dùng khi undefined
   };
+
+  if (!raw) return defaults;
+
+  // nếu chỉ có creditScoreChange → suy target + min/max
+  let sr = raw.scoreRange;
+  if (!sr && typeof raw.creditScoreChange === 'number') {
+    const base = 720;
+    const tgt = clamp(base + raw.creditScoreChange, 300, 850);
+    sr = { min: clamp(tgt - 25, 300, 850), max: clamp(tgt + 25, 300, 850), target: tgt };
+  }
+
+  // nếu có payoffDate → suy months
+  const months = raw.timeToTarget ?? monthsBetween(raw.payoffDate);
+
+  return {
+    scoreRange: { ...defaults.scoreRange, ...(sr ?? {}) },
+    confidenceLevel: raw.confidenceLevel ?? defaults.confidenceLevel,
+    timeToTarget: months ?? defaults.timeToTarget,
+    factorImpacts: raw.factorImpacts ?? defaults.factorImpacts,
+    monthlyProgress: raw.monthlyProgress ?? defaults.monthlyProgress,
+    creditScoreChange: raw.creditScoreChange ?? defaults.creditScoreChange,
+    totalInterestSaved: raw.totalInterestSaved ?? defaults.totalInterestSaved,
+    payoffDate: (raw.payoffDate as any) ?? (defaults.payoffDate as any),
+  };
+};
+
+const ResultsPanel: React.FC<ResultsPanelProps> = ({
+  currentScenario,
+  projectedResults,
+  onExportResults,
+}) => {
+  const [showDetails, setShowDetails] = useState(true);
+
+  // ✅ GHÉP default với dữ liệu truyền vào để luôn đủ field
+  const results = buildSafeResults(projectedResults);
 
   const getScoreColor = (score: number) =>
     score >= 750 ? 'text-success' : score >= 700 ? 'text-warning' : 'text-destructive';
@@ -198,9 +247,9 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
             <div>
               <h5 className="text-sm font-semibold text-foreground mb-2">Key Insights</h5>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Reducing utilization by 15% has highest impact</li>
-                <li>• Additional $250/month payment accelerates improvement</li>
-                <li>• Target score of 750+ achievable in {results.timeToTarget} months</li>
+                <li>• Reducing utilization has strong contribution</li>
+                <li>• Additional payments accelerate improvement</li>
+                <li>• Target score of {results.scoreRange.target}+ achievable in {results.timeToTarget} months</li>
                 <li>• Avoid opening new accounts during this period</li>
               </ul>
             </div>
