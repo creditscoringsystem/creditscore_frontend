@@ -32,8 +32,6 @@
 11. [Code Quality](#11-code-quality)  
 12. [Troubleshooting](#12-troubleshooting)  
 13. [Roadmap](#13-roadmap)  
-14. [License](#14-license)
-
 ---
 
 ## 1. Screens & Features
@@ -319,6 +317,7 @@ export async function simulateScenario(payload: any, months: number) {
 - i18n
 
 ---
+
 
 **Author**  
 Truong Hoang Ngoc Nhi — @Lyfee-synr
