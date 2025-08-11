@@ -9,7 +9,6 @@
   <a href="https://react.dev/"><img alt="React" src="https://img.shields.io/badge/React-19-149eca?logo=react"></a>
   <a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript"></a>
   <a href="https://tailwindcss.com/"><img alt="TailwindCSS" src="https://img.shields.io/badge/TailwindCSS-4-38b2ac?logo=tailwindcss"></a>
-  <a href="#14-license"><img alt="License" src="https://img.shields.io/badge/License-MIT-informational.svg"></a>
 </p>
 
 > **Credit Scoring UI** — Front-end for a machine-learning powered credit scoring system.  
