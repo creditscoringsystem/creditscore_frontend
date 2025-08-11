@@ -321,12 +321,6 @@ export async function simulateScenario(payload: any, months: number) {
 
 ---
 
-## 14. License
-
-MIT © 2025 — Your Team
-
----
-
 **Author**  
 Truong Hoang Ngoc Nhi — @Lyfee-synr
 
