@@ -1,61 +1,110 @@
+// src/pages/dashboard/what-if-scenario-simulator-dashboard/index.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import DashboardShell from '@/components/layouts/DashboardShell';
+
 import ScenarioControlPanel, { Scenario } from './components/ScenarioControlPanel';
 import ScenarioVisualization from './components/ScenarioVisualization';
 import ResultsPanel from './components/ResultsPanel';
 import TimelineSlider from './components/TimelineSlider';
 import ImpactSummaryCards from './components/ImpactSummaryCards';
 import ScenarioComparison from './components/ScenarioComparison';
+
 import { CurrencyProvider, useCurrency } from './components/CurrencyContext';
 
-export default function WhatIfScenarioSimulatorDashboard() {
+import {
+  fetchSimulator,
+  simulateScenario,
+  saveScenario as apiSaveScenario,
+  deleteScenario as apiDeleteScenario,
+  exportResults as apiExportResults,
+} from '@/lib/mockApi';
+
+/** Page Component (function declaration + default export) */
+export default function SimulatorPage() {
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [savedScenarios, setSavedScenarios] = useState<Scenario[]>([
-    { id: 1, name: 'Aggressive Paydown',    paymentAmount: 500, utilizationChange: -25, newAccounts: 0, payoffTimeline: 8,  creditLimit: 0,    accountAge: 24, createdAt: '2025-01-05T10:30:00.000Z' },
-    { id: 2, name: 'Conservative Approach', paymentAmount: 150, utilizationChange: -10, newAccounts: 0, payoffTimeline: 18, creditLimit: 2500, accountAge: 24, createdAt: '2025-01-04T14:15:00.000Z' },
-    { id: 3, name: 'Balance Transfer Strategy', paymentAmount: 300, utilizationChange: -20, newAccounts: 1, payoffTimeline: 12, creditLimit: 7500, accountAge: 24, createdAt: '2025-01-03T09:45:00.000Z' }
-  ]);
-
+  const [savedScenarios, setSavedScenarios] = useState<Scenario[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<number>(12);
   const [projectedResults, setProjectedResults] = useState<any>(null);
 
-  const handleScenarioChange = (scenario: Scenario) => {
+  /** nạp danh sách scenario đã lưu (mock) */
+  const loadSaved = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchSimulator();
+      setSavedScenarios(data?.savedScenarios ?? []);
+    } catch {
+      // fallback demo
+      setSavedScenarios([
+        { id: 1, name: 'Aggressive Paydown',    paymentAmount: 500, utilizationChange: -25, newAccounts: 0, payoffTimeline: 8,  creditLimit: 0,    accountAge: 24, createdAt: '2025-01-05T10:30:00.000Z' },
+        { id: 2, name: 'Conservative Approach', paymentAmount: 150, utilizationChange: -10, newAccounts: 0, payoffTimeline: 18, creditLimit: 2500, accountAge: 24, createdAt: '2025-01-04T14:15:00.000Z' },
+        { id: 3, name: 'Balance Transfer Strategy', paymentAmount: 300, utilizationChange: -20, newAccounts: 1, payoffTimeline: 12, creditLimit: 7500, accountAge: 24, createdAt: '2025-01-03T09:45:00.000Z' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadSaved(); }, []);
+
+  /** chạy mô phỏng khi chỉnh control */
+  const handleScenarioChange = async (scenario: Scenario) => {
     setCurrentScenario(scenario);
-    setTimeout(() => {
-      setProjectedResults({
-        creditScoreChange: Math.floor(Math.random() * 100) + 20,
-        totalInterestSaved: Math.floor(Math.random() * 5000) + 1000,
-        payoffDate: new Date(Date.now() + (scenario.payoffTimeline ?? 0) * 30 * 24 * 60 * 60 * 1000)
-      });
-    }, 500);
+    try {
+      const res = await simulateScenario(scenario, selectedTimeframe);
+      setProjectedResults(res?.projectedResults ?? null);
+    } catch {
+      setProjectedResults(null);
+    }
   };
 
-  const handleSaveScenario = (scenario: Scenario) => {
-    const newScenario: Scenario = {
-      ...scenario,
-      id: savedScenarios.length + 1,
-      createdAt: new Date().toISOString()
-    };
-    setSavedScenarios(prev => [...prev, newScenario]);
+  const handleSaveScenario = async (scenario: Scenario) => {
+    try {
+      const saved = await apiSaveScenario(scenario);
+      setSavedScenarios(prev => [...prev, saved]);
+    } catch {
+      const newScenario: Scenario = { ...scenario, id: (savedScenarios.at(-1)?.id ?? 0) + 1, createdAt: new Date().toISOString() };
+      setSavedScenarios(prev => [...prev, newScenario]);
+    }
   };
 
-  const handleTimeframeChange = (tf: number) => setSelectedTimeframe(tf);
-  const handlePlayAnimation = (playing: boolean) => { /* no-op */ };
-  const handleExportResults = (data: any) => { /* no-op */ };
-  const handleLoadScenario = (scenario: Scenario) => { setCurrentScenario(scenario); handleScenarioChange(scenario); };
-  const handleDeleteScenario = (id: number) => setSavedScenarios(prev => prev.filter(s => s.id !== id));
+  const handleTimeframeChange = async (tf: number) => {
+    setSelectedTimeframe(tf);
+    if (currentScenario) {
+      try {
+        const res = await simulateScenario(currentScenario, tf);
+        setProjectedResults(res?.projectedResults ?? null);
+      } catch {
+        setProjectedResults(null);
+      }
+    }
+  };
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+  const handlePlayAnimation = (_playing: boolean) => { /* visualization tự xử lý */ };
+
+  const handleExportResults = async (data: any) => {
+    try { await apiExportResults(data); } catch { /* ignore */ }
+  };
+
+  const handleLoadScenario = async (scenario: Scenario) => {
+    setCurrentScenario(scenario);
+    await handleScenarioChange(scenario);
+  };
+
+  const handleDeleteScenario = async (id: number) => {
+    try { await apiDeleteScenario(id); } catch { /* ignore */ }
+    setSavedScenarios(prev => prev.filter(s => s.id !== id));
+    if (currentScenario?.id === id) {
+      setCurrentScenario(null);
+      setProjectedResults(null);
+    }
+  };
 
   // Container chuẩn giữa + “nudge” sang trái (đồng bộ Overview/Analysis)
-  const CONTAINER = 'mx-auto max-w-[1440px] px-6'; // mở rộng container 1 chút cho thoáng
+  const CONTAINER = 'mx-auto max-w-[1440px] px-6';
   const NUDGE_LEFT = 'md:transform md:-translate-x-38 xl:-translate-x-30';
 
   if (isLoading) {
@@ -70,12 +119,12 @@ export default function WhatIfScenarioSimulatorDashboard() {
 
   return (
     <DashboardShell>
-      {/* Wrap toàn bộ trang bằng CurrencyProvider */}
+      {/* Bọc toàn bộ trang bằng CurrencyProvider để các component share currency */}
       <CurrencyProvider>
         <div className={`${CONTAINER} ${NUDGE_LEFT}`}>
           <HeaderWithCurrencyToggle />
 
-          {/* Giữ NGUYÊN bố cục lưới & component như file gốc (layout 5-5-5) */}
+          {/* Layout 5-5-5: grid-cols-15 */}
           <div className="grid gap-6 grid-cols-15">
             {/* col 1 - 5 */}
             <div className="col-span-15 lg:col-span-5 space-y-6">
@@ -129,7 +178,7 @@ export default function WhatIfScenarioSimulatorDashboard() {
   );
 }
 
-/* ====== UI toggle tiền tệ ở header ====== */
+/* ====== Toggle USD/VND ở header (pill neon bo tròn) ====== */
 function HeaderWithCurrencyToggle() {
   const { currency, setCurrency } = useCurrency();
 
@@ -144,7 +193,6 @@ function HeaderWithCurrencyToggle() {
         </p>
       </div>
 
-      {/* Toggle pill neon */}
       <div
         className="flex items-center p-1 rounded-full border"
         style={{ borderColor: 'var(--color-border,#E5E7EB)', boxShadow: '0 6px 24px rgba(15,23,42,0.06)' }}
@@ -152,7 +200,9 @@ function HeaderWithCurrencyToggle() {
         <button
           onClick={() => setCurrency('USD')}
           className={`px-4 h-9 rounded-full text-sm font-medium transition-all ${
-            currency === 'USD' ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]' : 'text-[var(--color-foreground,#0F172A)]'
+            currency === 'USD'
+              ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]'
+              : 'text-[var(--color-foreground,#0F172A)]'
           }`}
         >
           USD
@@ -160,7 +210,9 @@ function HeaderWithCurrencyToggle() {
         <button
           onClick={() => setCurrency('VND')}
           className={`px-4 h-9 rounded-full text-sm font-medium transition-all ${
-            currency === 'VND' ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]' : 'text-[var(--color-foreground,#0F172A)]'
+            currency === 'VND'
+              ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]'
+              : 'text-[var(--color-foreground,#0F172A)]'
           }`}
         >
           VND

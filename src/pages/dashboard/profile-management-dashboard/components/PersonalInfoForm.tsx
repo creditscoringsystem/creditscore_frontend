@@ -1,13 +1,33 @@
-// app/(dashboard)/profile/components/PersonalInfoForm.tsx   (ví dụ path)
+// src/pages/dashboard/profile-management-dashboard/components/PersonalInfoForm.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Icon from '@/components/AppIcon';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
-/* ------------ Kiểu dữ liệu ------------ */
+/**
+ * QUICK API HOOKUP (REST)
+ * ------------------------------------------------------------
+ * 1) Bật endpoint BE (ví dụ): PUT /api/profile
+ *    - Body: { firstName, lastName, email, phone, dateOfBirth, address, city, state, zipCode }
+ *    - Trả JSON { ok: true, updatedAt: <ISO string> }
+ *
+ * 2) Trong handleSave() bên dưới, thay đoạn giả lập bằng:
+ *      const res = await fetch('/api/profile', {
+ *        method: 'PUT',
+ *        headers: { 'Content-Type': 'application/json' },
+ *        body: JSON.stringify(form),
+ *      });
+ *      if (!res.ok) throw new Error('Save failed');
+ *      const { updatedAt } = await res.json();
+ *      setLastUpdated(new Date(updatedAt));
+ *
+ * 3) Nếu dùng GraphQL, thay bằng client.mutate(...) tương tự.
+ * ------------------------------------------------------------
+ */
+
 interface FormData {
   firstName: string;
   lastName: string;
@@ -18,23 +38,32 @@ interface FormData {
   city: string;
   state: string;
   zipCode: string;
-  socialSecurityNumber: string;
 }
 
-type EditingState = Record<string, boolean>;
-type ValidationErrors = Record<string, string | null>;
-
-interface ProfileField {
+type Field = {
   key: keyof FormData;
   label: string;
-  icon: string;       // tên icon trong lucide-react
+  icon: string;
   type: React.HTMLInputTypeAttribute;
-  required: boolean;
-}
+  required?: boolean;
+  placeholder?: string;
+};
 
-/* ------------ Component ------------ */
+const FIELDS: Field[] = [
+  { key: 'firstName',  label: 'First Name',     icon: 'User',     type: 'text',  required: true,  placeholder: 'John' },
+  { key: 'lastName',   label: 'Last Name',      icon: 'User',     type: 'text',  required: true,  placeholder: 'Doe' },
+  { key: 'email',      label: 'Email Address',  icon: 'Mail',     type: 'email', required: true,  placeholder: 'you@example.com' },
+  { key: 'phone',      label: 'Phone Number',   icon: 'Phone',    type: 'tel',   required: true,  placeholder: '+1 (555) 123-4567' },
+  { key: 'dateOfBirth',label: 'Date of Birth',  icon: 'Calendar', type: 'date' },
+  { key: 'address',    label: 'Street Address', icon: 'MapPin',   type: 'text',  placeholder: '123 Main Street' },
+  { key: 'city',       label: 'City',           icon: 'MapPin',   type: 'text',  placeholder: 'New York' },
+  { key: 'state',      label: 'State',          icon: 'MapPin',   type: 'text',  placeholder: 'NY' },
+  { key: 'zipCode',    label: 'ZIP Code',       icon: 'MapPin',   type: 'text',  placeholder: '10001' },
+];
+
 const PersonalInfoForm: React.FC = () => {
-  const [formData, setFormData] = useState<FormData>({
+  // dữ liệu mặc định (demo)
+  const [form, setForm] = useState<FormData>({
     firstName: 'John',
     lastName: 'Doe',
     email: 'john.doe@example.com',
@@ -44,166 +73,192 @@ const PersonalInfoForm: React.FC = () => {
     city: 'New York',
     state: 'NY',
     zipCode: '10001',
-    socialSecurityNumber: '***-**-****'
   });
 
-  const [editingFields, setEditingFields] = useState<EditingState>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  // trạng thái lưu
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date(Date.now() - 14 * 24 * 3600 * 1000)); // “2 weeks ago”
 
-  /* ---------- Handlers ---------- */
-  const handleFieldEdit = (field: keyof FormData) => {
-    setEditingFields((prev) => ({ ...prev, [field]: true }));
+  // errors
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+
+  // theo dõi “đã chỉnh sửa” để enable nút Save
+  const lastSavedRef = useRef<FormData>(form);
+  const isDirty = useMemo(
+    () => JSON.stringify(lastSavedRef.current) !== JSON.stringify(form),
+    [form]
+  );
+
+  const onChange = (k: keyof FormData, v: string) => {
+    setForm(s => ({ ...s, [k]: v }));
+    if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }));
   };
 
-  const handleFieldSave = (field: keyof FormData) => {
-    if (!formData[field]?.trim()) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [field]: 'This field is required'
-      }));
-      return;
+  // validate đơn giản
+  const validate = (): boolean => {
+    const next: Partial<Record<keyof FormData, string>> = {};
+    if (!form.firstName.trim()) next.firstName = 'Required';
+    if (!form.lastName.trim()) next.lastName = 'Required';
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Invalid email';
+    if (form.phone.replace(/\D/g, '').length < 8) next.phone = 'Invalid phone';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    setSaveMsg(null);
+
+    try {
+      // ======= REPLACE THIS BLOCK WITH YOUR REAL API CALL =======
+      await new Promise((r) => setTimeout(r, 700)); // giả lập network
+      // const res = await fetch('/api/profile', { ... }); // <-- xem hướng dẫn trên cùng file
+      // if (!res.ok) throw new Error('Save failed');
+      // const { updatedAt } = await res.json();
+      // setLastUpdated(new Date(updatedAt));
+      // ==========================================================
+
+      lastSavedRef.current = form;
+      setLastUpdated(new Date());
+      setSaveMsg('Saved successfully');
+    } catch (e) {
+      setSaveMsg('Save failed. Please try again.');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 2500);
     }
-    setEditingFields((prev) => ({ ...prev, [field]: false }));
-    setValidationErrors((prev) => ({ ...prev, [field]: null }));
   };
 
-  const handleFieldChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => ({ ...prev, [field]: null }));
-    }
-  };
+  const sinceText = useMemo(() => {
+    if (!lastUpdated) return '';
+    const diff = Date.now() - lastUpdated.getTime();
+    const days = Math.floor(diff / (24 * 3600 * 1000));
+    if (days <= 0) return 'just now';
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+  }, [lastUpdated]);
 
-  /* ---------- Field config ---------- */
-  const profileFields: ProfileField[] = [
-    { key: 'firstName',  label: 'First Name',  icon: 'User',      type: 'text',  required: true },
-    { key: 'lastName',   label: 'Last Name',   icon: 'User',      type: 'text',  required: true },
-    { key: 'email',      label: 'Email Address', icon: 'Mail',   type: 'email', required: true },
-    { key: 'phone',      label: 'Phone Number',  icon: 'Phone',  type: 'tel',   required: true },
-    { key: 'dateOfBirth',label: 'Date of Birth', icon: 'Calendar',type: 'date', required: false },
-    { key: 'address',    label: 'Street Address',icon: 'MapPin', type: 'text',  required: false },
-    { key: 'city',       label: 'City',          icon: 'MapPin', type: 'text',  required: false },
-    { key: 'state',      label: 'State',         icon: 'MapPin', type: 'text',  required: false },
-    { key: 'zipCode',    label: 'ZIP Code',      icon: 'MapPin', type: 'text',  required: false }
-  ];
+  const inputCls =
+    'h-11 w-full rounded-lg pl-10 border !bg-white !text-[#0F172A] placeholder-[#9CA3AF] ' +
+    'border-[var(--color-border,#E5E7EB)] focus:outline-none focus:ring-2 ' +
+    'focus:ring-[var(--color-neon,#12F7A0)] focus:ring-offset-2 focus:ring-offset-white';
 
-  /* ---------- Render ---------- */
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="bg-card rounded-lg border border-border p-6 shadow-elevation-2 neon-border-glow"
+      transition={{ duration: 0.2 }}
+      className="rounded-lg border p-6 shadow-elevation-2"
+      style={{ background: '#FFFFFF', borderColor: 'var(--color-border,#E5E7EB)' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground neon-text-glow">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold" style={{ color: '#0F172A' }}>
           Personal Information
         </h3>
-        <div className="text-sm text-muted-foreground">Last updated: 2 weeks ago</div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-sm" style={{ color: '#0F172A' }}>
+            Last updated: {sinceText}
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            iconName="Save"
+            className={[
+              '!px-4 !h-9 rounded-lg',
+              isDirty
+                ? '!bg-[var(--color-neon,#12F7A0)] !text-[#0F172A] hover:opacity-90'
+                : 'opacity-60 cursor-not-allowed !bg-[var(--color-neon,#12F7A0)] !text-[#0F172A]',
+            ].join(' ')}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
       </div>
 
-      {/* Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {profileFields.map((field, index) => (
+      {/* Info message */}
+      {saveMsg && (
+        <div
+          className={`mb-4 rounded-md border px-3 py-2 text-sm ${
+            saveMsg.startsWith('Saved')
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-rose-200 bg-rose-50 text-rose-700'
+          }`}
+        >
+          {saveMsg}
+        </div>
+      )}
+
+      {/* Form grid */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {FIELDS.map((f, i) => (
           <motion.div
-            key={field.key}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="space-y-2"
+            key={f.key}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
           >
-            <label className="block text-sm font-medium text-foreground">
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
+            <label className="mb-1 block text-sm font-medium" style={{ color: '#0F172A' }}>
+              {f.label} {f.required && <span className="ml-1 text-red-500">*</span>}
             </label>
 
-            <div className="relative group">
-              {editingFields[field.key] ? (
-                /* --- Edit mode --- */
-                <div className="flex space-x-2">
-                  <div className="flex-1 relative">
-                    <Icon
-                      name={field.icon}
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                      type={field.type}
-                      value={formData[field.key] || ''}
-                      onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                      className={`pl-10 neon-border-glow ${
-                        validationErrors[field.key] ? 'border-destructive' : ''
-                      }`}
-                      placeholder={`Enter ${field.label.toLowerCase()}`}
-                    />
-                  </div>
-                  <Button size="sm" onClick={() => handleFieldSave(field.key)} className="neon-glow">
-                    <Icon name="Check" size={16} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditingFields((prev) => ({ ...prev, [field.key]: false }))}
-                    className="neon-border-glow"
-                  >
-                    <Icon name="X" size={16} />
-                  </Button>
-                </div>
-              ) : (
-                /* --- Display mode --- */
-                <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/50 hover:neon-border-glow transition-all duration-200 group-hover:bg-muted/70">
-                  <div className="flex items-center space-x-3">
-                    <Icon name={field.icon} size={16} className="text-muted-foreground" />
-                    <span className="text-foreground">
-                      {formData[field.key] || 'Not set'}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleFieldEdit(field.key)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:neon-border-glow"
-                  >
-                    <Icon name="Edit2" size={14} />
-                  </Button>
-                </div>
-              )}
-
-              {validationErrors[field.key] && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-destructive mt-1"
-                >
-                  {validationErrors[field.key]}
-                </motion.p>
-              )}
+            <div className="relative">
+              <Icon
+                name={f.icon}
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: '#0F172A' }}
+              />
+              <Input
+                type={f.type}
+                value={form[f.key] ?? ''}
+                onChange={(e) => onChange(f.key, e.target.value)}
+                placeholder={f.placeholder}
+                className={`${inputCls} ${errors[f.key] ? 'border-rose-400' : ''}`}
+                aria-invalid={!!errors[f.key]}
+                aria-describedby={errors[f.key] ? `${f.key}-err` : undefined}
+                autoComplete="off"
+              />
             </div>
+
+            {errors[f.key] && (
+              <p id={`${f.key}-err`} className="mt-1 text-xs text-rose-600">
+                {errors[f.key]}
+              </p>
+            )}
           </motion.div>
         ))}
       </div>
 
-      {/* Recent changes */}
+      {/* Recent Changes */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mt-8 pt-6 border-t border-border"
+        transition={{ delay: 0.25 }}
+        className="mt-8 border-t pt-6"
+        style={{ borderColor: 'var(--color-border,#E5E7EB)' }}
       >
-        <h4 className="font-semibold text-foreground mb-4">Recent Changes</h4>
+        <h4 className="mb-4 font-semibold" style={{ color: '#0F172A' }}>
+          Recent Changes
+        </h4>
+
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Phone number updated</span>
-            <span className="text-primary">2 weeks ago</span>
+            <span style={{ color: '#0F172A' }}>Phone number updated</span>
+            <span className="text-[var(--color-neon,#12F7A0)]">2 weeks ago</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Email address verified</span>
-            <span className="text-success">1 month ago</span>
+            <span style={{ color: '#0F172A' }}>Email address verified</span>
+            <span className="text-[var(--color-neon,#12F7A0)]">1 month ago</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Address information added</span>
-            <span className="text-primary">2 months ago</span>
+            <span style={{ color: '#0F172A' }}>Address information added</span>
+            <span className="text-[var(--color-neon,#12F7A0)]">2 months ago</span>
           </div>
         </div>
       </motion.div>

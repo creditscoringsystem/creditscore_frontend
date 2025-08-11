@@ -1,7 +1,7 @@
 // src/pages/dashboard/what-if-scenario-simulator-dashboard/components/ResultsPanel.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Icon from '@/components/AppIcon';
 import Button from '@/components/ui/Button';
 
@@ -19,13 +19,11 @@ interface ScoreRange {
 }
 
 interface ProjectedResults {
-  // dữ liệu gốc
   scoreRange?: ScoreRange;
   confidenceLevel?: number;
   timeToTarget?: number;
   factorImpacts?: FactorImpact[];
   monthlyProgress?: { month: number; score: number; confidence: number }[];
-  // dữ liệu rời rạc mà parent đang truyền
   creditScoreChange?: number;
   totalInterestSaved?: number;
   payoffDate?: Date | string;
@@ -37,7 +35,7 @@ interface ResultsPanelProps {
   onExportResults?: (data: any) => void;
 }
 
-/* ========= helpers ========= */
+/* ================= helpers ================= */
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const monthsBetween = (to?: Date | string) => {
   if (!to) return undefined;
@@ -47,99 +45,97 @@ const monthsBetween = (to?: Date | string) => {
   return Math.max(0, (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth()));
 };
 
-/** Hợp nhất dữ liệu truyền vào (có thể thiếu) với default an toàn */
 const buildSafeResults = (raw?: ProjectedResults): Required<ProjectedResults> => {
-  // default “đẹp” để hiển thị
   const defaults: Required<ProjectedResults> = {
-    scoreRange: { min: 725, max: 775, target: 750 },
-    confidenceLevel: 85,
-    timeToTarget: 10,
+    scoreRange: { min: 745, max: 785, target: 765 },
+    confidenceLevel: 87,
+    timeToTarget: 8,
     factorImpacts: [
-      { factor: 'Payment History', current: 35, projected: 38, change: 3 },
-      { factor: 'Credit Utilization', current: 25, projected: 30, change: 5 },
-      { factor: 'Length of History', current: 15, projected: 16, change: 1 },
-      { factor: 'Credit Mix', current: 10, projected: 10, change: 0 },
-      { factor: 'New Credit', current: 10, projected: 8, change: -2 },
+      { factor: 'Payment History',     current: 35, projected: 38, change:  3 },
+      { factor: 'Credit Utilization',  current: 25, projected: 30, change:  5 },
+      { factor: 'Length of History',   current: 15, projected: 16, change:  1 },
+      { factor: 'Credit Mix',          current: 10, projected: 10, change:  0 },
+      { factor: 'New Credit',          current: 10, projected:  8, change: -2 },
     ],
     monthlyProgress: [
-      { month: 1, score: 730, confidence: 90 },
-      { month: 3, score: 740, confidence: 88 },
-      { month: 6, score: 755, confidence: 86 },
-      { month: 12, score: 750, confidence: 85 },
+      { month:  1, score: 725, confidence: 90 },
+      { month:  3, score: 740, confidence: 88 },
+      { month:  6, score: 755, confidence: 86 },
+      { month: 12, score: 765, confidence: 85 },
     ],
     creditScoreChange: 0,
     totalInterestSaved: 0,
-    payoffDate: undefined as unknown as Date, // sẽ không dùng khi undefined
+    payoffDate: undefined as unknown as Date,
   };
 
   if (!raw) return defaults;
 
-  // nếu chỉ có creditScoreChange → suy target + min/max
   let sr = raw.scoreRange;
   if (!sr && typeof raw.creditScoreChange === 'number') {
     const base = 720;
     const tgt = clamp(base + raw.creditScoreChange, 300, 850);
     sr = { min: clamp(tgt - 25, 300, 850), max: clamp(tgt + 25, 300, 850), target: tgt };
   }
-
-  // nếu có payoffDate → suy months
   const months = raw.timeToTarget ?? monthsBetween(raw.payoffDate);
 
   return {
-    scoreRange: { ...defaults.scoreRange, ...(sr ?? {}) },
-    confidenceLevel: raw.confidenceLevel ?? defaults.confidenceLevel,
-    timeToTarget: months ?? defaults.timeToTarget,
-    factorImpacts: raw.factorImpacts ?? defaults.factorImpacts,
-    monthlyProgress: raw.monthlyProgress ?? defaults.monthlyProgress,
+    scoreRange:       { ...defaults.scoreRange, ...(sr ?? {}) },
+    confidenceLevel:  raw.confidenceLevel  ?? defaults.confidenceLevel,
+    timeToTarget:     months               ?? defaults.timeToTarget,
+    factorImpacts:    raw.factorImpacts    ?? defaults.factorImpacts,
+    monthlyProgress:  raw.monthlyProgress  ?? defaults.monthlyProgress,
     creditScoreChange: raw.creditScoreChange ?? defaults.creditScoreChange,
     totalInterestSaved: raw.totalInterestSaved ?? defaults.totalInterestSaved,
-    payoffDate: (raw.payoffDate as any) ?? (defaults.payoffDate as any),
+    payoffDate:       (raw.payoffDate as any) ?? (defaults.payoffDate as any),
   };
 };
 
+const toneForChange = (v: number) =>
+  v > 0 ? 'text-emerald-600' : v < 0 ? 'text-rose-600' : 'text-slate-500';
+
+const iconForChange = (v: number) =>
+  v > 0 ? 'TrendingUp' : v < 0 ? 'TrendingDown' : 'Minus';
+
+/* ================= component ================= */
 const ResultsPanel: React.FC<ResultsPanelProps> = ({
   currentScenario,
   projectedResults,
   onExportResults,
 }) => {
   const [showDetails, setShowDetails] = useState(true);
-
-  // ✅ GHÉP default với dữ liệu truyền vào để luôn đủ field
-  const results = buildSafeResults(projectedResults);
-
-  const getScoreColor = (score: number) =>
-    score >= 750 ? 'text-success' : score >= 700 ? 'text-warning' : 'text-destructive';
-
-  const getChangeIcon = (change: number) =>
-    change > 0 ? 'TrendingUp' : change < 0 ? 'TrendingDown' : 'Minus';
-
-  const getChangeColor = (change: number) =>
-    change > 0 ? 'text-success' : change < 0 ? 'text-destructive' : 'text-muted-foreground';
+  const results = useMemo(() => buildSafeResults(projectedResults), [projectedResults]);
 
   const handleExport = () => {
-    const exportData = {
+    onExportResults?.({
       scenario: currentScenario,
       results,
       exportedAt: new Date().toISOString(),
-    };
-    onExportResults?.(exportData);
+    });
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-elevation-1">
+    <div
+      className="rounded-xl border shadow-elevation-1 bg-card"
+      style={{ borderColor: 'var(--color-border,#E5E7EB)' }}
+    >
       {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-              <Icon name="BarChart3" size={20} className="text-success" />
+      <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--color-border,#E5E7EB)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <Icon name="BarChart3" size={18} className="text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground">Projection Results</h3>
-              <p className="text-sm text-muted-foreground">Expected outcomes and timeline</p>
+              <h3 className="text-base font-semibold" style={{ color: '#0F172A' }}>
+                Projection Results
+              </h3>
+              <p className="text-xs" style={{ color: '#374151' }}>
+                Expected outcomes and timeline
+              </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" iconName="Download" onClick={handleExport}>
               Export
             </Button>
@@ -156,83 +152,130 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
       </div>
 
       {/* Body */}
-      <div className="p-6 space-y-6">
-        {/* Score Summary */}
-        <div className="bg-gradient-to-r from-success/5 to-primary/5 rounded-lg p-6 text-center space-y-4">
-          <div className={`text-4xl font-bold ${getScoreColor(results.scoreRange.target)}`}>
-            {results.scoreRange.target}
+      <div className="p-5 space-y-6">
+        {/* ===== Hero numbers (nhỏ & gọn – bám đúng design) ===== */}
+        <div className="rounded-lg bg-gradient-to-r from-emerald-50/60 to-sky-50/60 px-4 py-5">
+          <div className="text-center">
+            <div className="text-[28px] leading-7 font-bold text-emerald-600">
+              {results.scoreRange.target}
+            </div>
+            <div className="text-xs mt-1" style={{ color: '#374151' }}>
+              Projected Score
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">Projected Score</div>
-          <div className="flex items-center justify-center space-x-6">
+
+          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
             <div>
-              <div className="text-lg font-semibold text-foreground">
-                {results.scoreRange.min} - {results.scoreRange.max}
+              <div className="text-[13px] font-semibold" style={{ color: '#0F172A' }}>
+                {results.scoreRange.min} – {results.scoreRange.max}
               </div>
-              <div className="text-xs text-muted-foreground">Score Range</div>
+              <div className="text-[11px]" style={{ color: '#374151' }}>
+                Score Range
+              </div>
             </div>
-            <div className="w-px h-8 bg-border" />
             <div>
-              <div className="text-lg font-semibold text-primary">{results.confidenceLevel}%</div>
-              <div className="text-xs text-muted-foreground">Confidence</div>
+              <div className="text-[13px] font-semibold text-emerald-600">
+                {results.confidenceLevel}%
+              </div>
+              <div className="text-[11px]" style={{ color: '#374151' }}>
+                Confidence
+              </div>
             </div>
-            <div className="w-px h-8 bg-border" />
             <div>
-              <div className="text-lg font-semibold text-warning">{results.timeToTarget} mo</div>
-              <div className="text-xs text-muted-foreground">To Target</div>
+              <div className="text-[13px] font-semibold text-amber-500">
+                {results.timeToTarget} mo
+              </div>
+              <div className="text-[11px]" style={{ color: '#374151' }}>
+                To Target
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Factor Impact */}
-        <div className="space-y-4">
+        {/* ===== Factor impact (bám layout: trái-phải, nhỏ gọn, icon màu) ===== */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-base font-semibold text-foreground">Factor Impact Analysis</h4>
-            <div className="text-sm text-muted-foreground">Current vs Projected</div>
+            <h4 className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+              Factor Impact Analysis
+            </h4>
+            <span className="text-xs" style={{ color: '#374151' }}>
+              Current vs Projected
+            </span>
           </div>
-          <div className="space-y-3">
-            {results.factorImpacts.map((f, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Icon name={getChangeIcon(f.change)} size={16} className={getChangeColor(f.change)} />
+
+          <div className="space-y-2">
+            {results.factorImpacts.map((f, i) => (
+              <div
+                key={`${f.factor}-${i}`}
+                className="flex items-center justify-between rounded-lg border px-3 py-2"
+                style={{ borderColor: 'var(--color-border,#E5E7EB)' }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-md bg-slate-50 flex items-center justify-center">
+                    <Icon name={iconForChange(f.change)} size={16} className={toneForChange(f.change)} />
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{f.factor}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium truncate" style={{ color: '#0F172A' }}>
+                      {f.factor}
+                    </div>
+                    <div className="text-[11px]" style={{ color: '#374151' }}>
                       {f.current}% → {f.projected}%
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`text-sm font-semibold ${getChangeColor(f.change)}`}>
+
+                <div className="text-right shrink-0">
+                  <div className={`text-[13px] font-semibold ${toneForChange(f.change)}`}>
                     {f.change > 0 ? '+' : ''}{f.change}%
                   </div>
-                  <div className="text-xs text-muted-foreground">Impact</div>
+                  <div className="text-[11px]" style={{ color: '#374151' }}>
+                    Impact
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Monthly Progress */}
-        {showDetails && results.monthlyProgress && (
-          <div className="space-y-4">
-            <h4 className="text-base font-semibold text-foreground">Progress Timeline</h4>
-            <div className="space-y-3">
+        {/* ===== Progress timeline (card dọc, số ở phải) ===== */}
+        {showDetails && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+              Progress Timeline
+            </h4>
+
+            <div className="space-y-2">
               {results.monthlyProgress.map((m) => (
-                <div key={m.month} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-semibold">
+                <div
+                  key={m.month}
+                  className="flex items-center justify-between rounded-lg border px-3 py-3"
+                  style={{ borderColor: 'var(--color-border,#E5E7EB)' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-emerald-500 text-white text-[13px] leading-8 text-center font-semibold">
                       {m.month}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-foreground">Month {m.month}</div>
-                      <div className="text-xs text-muted-foreground">{m.confidence}% confidence</div>
+                      <div className="text-[13px] font-medium" style={{ color: '#0F172A' }}>
+                        Month {m.month}
+                      </div>
+                      <div className="text-[11px]" style={{ color: '#374151' }}>
+                        {m.confidence}% confidence
+                      </div>
                     </div>
                   </div>
+
                   <div className="text-right">
-                    <div className={`text-lg font-bold ${getScoreColor(m.score)}`}>{m.score}</div>
-                    <div className="text-xs text-muted-foreground">+{m.score - 720} pts</div>
+                    <div
+                      className={`text-[15px] font-bold ${
+                        m.score >= 750 ? 'text-emerald-600' : m.score >= 700 ? 'text-amber-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {m.score}
+                    </div>
+                    <div className="text-[11px]" style={{ color: '#374151' }}>
+                      +{m.score - 720} pts
+                    </div>
                   </div>
                 </div>
               ))}
@@ -240,14 +283,14 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           </div>
         )}
 
-        {/* Key Insights */}
-        <div className="bg-primary/5 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <Icon name="Lightbulb" size={20} className="text-primary mt-0.5" />
+        {/* ===== Key insights ===== */}
+        <div className="rounded-lg border px-4 py-3" style={{ borderColor: 'var(--color-border,#E5E7EB)' }}>
+          <div className="flex items-start gap-3">
+            <Icon name="Lightbulb" size={18} className="text-emerald-600 mt-0.5" />
             <div>
-              <h5 className="text-sm font-semibold text-foreground mb-2">Key Insights</h5>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Reducing utilization has strong contribution</li>
+              <h5 className="text-sm font-semibold" style={{ color: '#0F172A' }}>Key Insights</h5>
+              <ul className="mt-1 space-y-1 text-[13px]" style={{ color: '#374151' }}>
+                <li>• Reducing utilization by 15% has the highest impact</li>
                 <li>• Additional payments accelerate improvement</li>
                 <li>• Target score of {results.scoreRange.target}+ achievable in {results.timeToTarget} months</li>
                 <li>• Avoid opening new accounts during this period</li>
@@ -256,21 +299,30 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           </div>
         </div>
 
-        {/* Recommendations */}
-        <div className="space-y-3">
-          <h4 className="text-base font-semibold text-foreground">Recommended Actions</h4>
-          <div className="grid grid-cols-1 gap-3">
-            <div className="flex items-center space-x-3 p-3 bg-success/5 border border-success/20 rounded-lg">
-              <Icon name="CheckCircle" size={16} className="text-success" />
-              <span className="text-sm text-foreground">Pay down high-utilization cards first</span>
+        {/* ===== Recommendations ===== */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+            Recommended Actions
+          </h4>
+
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center gap-3 rounded-lg border px-3 py-2 bg-emerald-50/50 border-emerald-100">
+              <Icon name="CheckCircle" size={16} className="text-emerald-600" />
+              <span className="text-[13px]" style={{ color: '#0F172A' }}>
+                Pay down high-utilization cards first
+              </span>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-warning/5 border border-warning/20 rounded-lg">
-              <Icon name="AlertTriangle" size={16} className="text-warning" />
-              <span className="text-sm text-foreground">Set up automatic payments to avoid late fees</span>
+            <div className="flex items-center gap-3 rounded-lg border px-3 py-2 bg-amber-50/50 border-amber-100">
+              <Icon name="AlertTriangle" size={16} className="text-amber-600" />
+              <span className="text-[13px]" style={{ color: '#0F172A' }}>
+                Set up automatic payments to avoid late fees
+              </span>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <Icon name="Info" size={16} className="text-primary" />
-              <span className="text-sm text-foreground">Monitor progress monthly for best results</span>
+            <div className="flex items-center gap-3 rounded-lg border px-3 py-2 bg-sky-50/50 border-sky-100">
+              <Icon name="Info" size={16} className="text-sky-600" />
+              <span className="text-[13px]" style={{ color: '#0F172A' }}>
+                Monitor progress monthly for best results
+              </span>
             </div>
           </div>
         </div>

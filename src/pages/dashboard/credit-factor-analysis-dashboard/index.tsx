@@ -1,4 +1,3 @@
-// pages/credit-factor-analysis-dashboard/index.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -31,23 +30,20 @@ const CreditFactorAnalysisDashboard: React.FC = () => {
     <DashboardShell>
       <div className={`${CONTAINER} ${NUDGE_LEFT}`}>
         <header className="mb-8">
-          {/* Đậm hơn + ép màu đen xanh đậm */}
           <h1
             className="text-3xl font-bold mb-2"
-            style={{ color: '#0F172A' }} // đen đậm
+            style={{ color: '#0F172A' }}
           >
             Factor Analysis
           </h1>
-          {/* Mô tả cũng đậm màu hơn một chút */}
           <p
             className="text-base"
-            style={{ color: '#374151' }} // xám đậm
+            style={{ color: '#374151' }}
           >
             Detailed breakdown of credit score factors
           </p>
         </header>
 
-        {/* Chỉ giữ phần nội dung thật cần dùng */}
         <div className="space-y-6">
           <DetailedFactorBreakdown />
         </div>

@@ -1,46 +1,62 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type Currency = 'USD' | 'VND';
-export const USD_TO_VND = 25000;
-
-const fmtUSD = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-const fmtVND = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-});
 
 type Ctx = {
   currency: Currency;
   setCurrency: (c: Currency) => void;
-  /** format số USD sang chuỗi đúng đơn vị hiện tại */
-  formatMoney: (amountUSD: number) => string;
-  /** hệ số quy đổi hiển thị (1 với USD, 25.000 với VND) – chỉ dùng nếu cần value số */
-  rate: number;
+  formatMoney: (amount: number) => string;
 };
 
-const CurrencyContext = createContext<Ctx | null>(null);
+const CurrencyContext = createContext<Ctx | undefined>(undefined);
 
-export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currency, setCurrency] = useState<Currency>('USD');
+// Lazy init KHÔNG đọc localStorage khi SSR
+function getInitial(): Currency {
+  if (typeof window === 'undefined') return 'USD';
+  const saved = window.localStorage.getItem('currency') as Currency | null;
+  return saved === 'VND' || saved === 'USD' ? saved : 'USD';
+}
 
-  const value = useMemo<Ctx>(() => {
-    const rate = currency === 'USD' ? 1 : USD_TO_VND;
-    const formatMoney = (usd: number) => (currency === 'USD' ? fmtUSD.format(usd) : fmtVND.format(usd * USD_TO_VND));
-    return { currency, setCurrency, formatMoney, rate };
+export function CurrencyProvider({ children }: { children: React.ReactNode }) {
+  const [currency, setCurrency] = useState<Currency>(getInitial);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('currency', currency);
+      }
+    } catch {/* ignore */}
   }, [currency]);
 
-  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
-};
+  const formatMoney = useMemo(() => {
+    if (currency === 'VND') {
+      // 500.000.000 ₫ (có space trước ký hiệu)
+      const fmt = new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0,
+      });
+      return (amount: number) => fmt.format(amount).replace('\u00A0', ' ');
+    }
+    // USD: $20,000.00
+    const fmt = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    return (amount: number) => fmt.format(amount);
+  }, [currency]);
 
-export const useCurrency = () => {
+  const value: Ctx = { currency, setCurrency, formatMoney };
+
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
+}
+
+export function useCurrency() {
   const ctx = useContext(CurrencyContext);
-  if (!ctx) throw new Error('useCurrency must be used within CurrencyProvider');
+  if (!ctx) throw new Error('useCurrency must be used inside <CurrencyProvider>');
   return ctx;
-};
+}

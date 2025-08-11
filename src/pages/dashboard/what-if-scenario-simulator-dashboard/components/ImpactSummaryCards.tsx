@@ -4,6 +4,7 @@
 
 import React from 'react';
 import Icon from '@/components/AppIcon';
+import { useCurrency } from '@/pages/dashboard/what-if-scenario-simulator-dashboard/components/CurrencyContext';
 
 interface Scenario {
   paymentAmount: number;
@@ -33,7 +34,7 @@ interface ImpactSummaryCardsProps {
   projectedResults?: any; // reserved
 }
 
-/* ===== Local palette (fallback) ===== */
+/* ===== Palette fallback ===== */
 const C = {
   card: 'var(--color-card, #FFFFFF)',
   border: 'var(--color-border, #E5E7EB)',
@@ -44,22 +45,25 @@ const C = {
 
 const accent = (k: ColorKey) => {
   switch (k) {
-    case 'success':
-      return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
-    case 'warning':
-      return { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' };
-    case 'destructive':
-      return { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' };
-    default:
-      return { text: 'text-muted-foreground', bg: 'bg-slate-50', border: 'border-border' };
+    case 'success': return { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' };
+    case 'warning': return { text: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-200' };
+    case 'destructive': return { text: 'text-rose-600', bg: 'bg-rose-50',    border: 'border-rose-200' };
+    default: return { text: 'text-muted-foreground', bg: 'bg-slate-50', border: 'border-border' };
   }
 };
-
 const trendIconOf = (t: TrendKey) => (t === 'up' ? 'TrendingUp' : t === 'down' ? 'TrendingDown' : 'Minus');
-const trendTextOf = (t: TrendKey) =>
-  t === 'up' ? 'text-emerald-600' : t === 'down' ? 'text-rose-600' : 'text-muted-foreground';
+const trendTextOf = (t: TrendKey) => (t === 'up' ? 'text-emerald-600' : t === 'down' ? 'text-rose-600' : 'text-muted-foreground');
 
-/* Fallback để luôn có số liệu */
+/* Co chữ số lớn theo độ dài chuỗi để không tràn */
+const bigSize = (v: string | number) => {
+  const len = String(v).length;
+  if (len <= 10) return 'text-[20px]';
+  if (len <= 14) return 'text-[18px]';
+  if (len <= 18) return 'text-[16px]';
+  return 'text-[14px]';
+};
+
+/* Fallback dữ liệu */
 const FALLBACK_SCENARIO: Scenario = {
   paymentAmount: 250,
   utilizationChange: -15,
@@ -69,95 +73,91 @@ const FALLBACK_SCENARIO: Scenario = {
 };
 
 export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCardsProps) {
-  const calculateImpacts = (scenario: Scenario): Impact[] => {
-    const baseScore = 720;
-    const paymentImpact = (scenario.paymentAmount / 100) * 2.5;
-    const utilizationImpact = Math.abs(scenario.utilizationChange) * 1.2;
-    const newAccountImpact = scenario.newAccounts * -8;
-    const payoffImpact = scenario.payoffTimeline <= 12 ? 20 : 12;
-    const creditLimitImpact = (scenario.creditLimit / 1000) * 0.8;
+  const { formatMoney } = useCurrency();
+  const s = currentScenario ?? FALLBACK_SCENARIO;
 
-    return [
-      {
-        id: 'payment',
-        title: 'Payment History',
-        icon: 'CreditCard',
-        currentValue: '35%',
-        projectedValue: '38%',
-        impact: Math.round(paymentImpact),
-        description: `Additional $${scenario.paymentAmount}/month payment`,
-        color: paymentImpact > 0 ? 'success' : 'muted-foreground',
-        trend: paymentImpact > 0 ? 'up' : 'neutral',
-      },
-      {
-        id: 'utilization',
-        title: 'Credit Utilization',
-        icon: 'PieChart',
-        currentValue: '65%',
-        projectedValue: `${Math.max(10, 65 + scenario.utilizationChange)}%`,
-        impact: Math.round(utilizationImpact),
-        description: `${scenario.utilizationChange > 0 ? 'Increase' : 'Decrease'} by ${Math.abs(
-          scenario.utilizationChange,
-        )}%`,
-        color: scenario.utilizationChange < 0 ? 'success' : 'destructive',
-        trend: scenario.utilizationChange < 0 ? 'up' : 'down',
-      },
-      {
-        id: 'newCredit',
-        title: 'New Credit Accounts',
-        icon: 'Plus',
-        currentValue: '2',
-        projectedValue: 2 + scenario.newAccounts,
-        impact: Math.round(newAccountImpact),
-        description: `${scenario.newAccounts} new account${scenario.newAccounts !== 1 ? 's' : ''}`,
-        color: scenario.newAccounts === 0 ? 'success' : 'destructive',
-        trend: scenario.newAccounts === 0 ? 'neutral' : 'down',
-      },
-      {
-        id: 'payoff',
-        title: 'Debt Payoff',
-        icon: 'Target',
-        currentValue: '24 mo',
-        projectedValue: `${scenario.payoffTimeline} mo`,
-        impact: Math.round(payoffImpact),
-        description: `Complete payoff in ${scenario.payoffTimeline} months`,
-        color: scenario.payoffTimeline <= 12 ? 'success' : 'warning',
-        trend: scenario.payoffTimeline <= 12 ? 'up' : 'neutral',
-      },
-      {
-        id: 'creditLimit',
-        title: 'Credit Limit',
-        icon: 'TrendingUp',
-        currentValue: '$15,000',
-        projectedValue: `$${(15000 + scenario.creditLimit).toLocaleString()}`,
-        impact: Math.round(creditLimitImpact),
-        description: `$${scenario.creditLimit.toLocaleString()} limit increase`,
-        color: scenario.creditLimit > 0 ? 'success' : 'muted-foreground',
-        trend: scenario.creditLimit > 0 ? 'up' : 'neutral',
-      },
-      {
-        id: 'overall',
-        title: 'Overall Impact',
-        icon: 'BarChart3',
-        currentValue: '720',
-        projectedValue: Math.round(
-          baseScore + paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact,
-        ),
-        impact: Math.round(paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact),
-        description: 'Combined effect of all changes',
-        color:
-          paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0
-            ? 'success'
-            : 'destructive',
-        trend:
-          paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0 ? 'up' : 'down',
-      },
-    ];
-  };
+  // ====== tính toán impacts
+  const baseScore = 720;
+  const paymentImpact = (s.paymentAmount / 100) * 2.5;
+  const utilizationImpact = Math.abs(s.utilizationChange) * 1.2;
+  const newAccountImpact = s.newAccounts * -8;
+  const payoffImpact = s.payoffTimeline <= 12 ? 20 : 12;
+  const creditLimitImpact = (s.creditLimit / 1000) * 0.8;
 
-  const impacts = calculateImpacts(currentScenario ?? FALLBACK_SCENARIO);
+  const impacts: Impact[] = [
+    {
+      id: 'payment',
+      title: 'Payment History',
+      icon: 'CreditCard',
+      currentValue: '35%',
+      projectedValue: '38%',
+      impact: Math.round(paymentImpact),
+      description: `Additional ${formatMoney(s.paymentAmount)}/month payment`,
+      color: paymentImpact > 0 ? 'success' : 'muted-foreground',
+      trend: paymentImpact > 0 ? 'up' : 'neutral',
+    },
+    {
+      id: 'utilization',
+      title: 'Credit Utilization',
+      icon: 'PieChart',
+      currentValue: '65%',
+      projectedValue: `${Math.max(10, 65 + s.utilizationChange)}%`,
+      impact: Math.round(utilizationImpact),
+      description: `${s.utilizationChange > 0 ? 'Increase' : 'Decrease'} by ${Math.abs(s.utilizationChange)}%`,
+      color: s.utilizationChange < 0 ? 'success' : 'destructive',
+      trend: s.utilizationChange < 0 ? 'up' : 'down',
+    },
+    {
+      id: 'newCredit',
+      title: 'New Credit Accounts',
+      icon: 'Plus',
+      currentValue: '2',
+      projectedValue: 2 + s.newAccounts,
+      impact: Math.round(newAccountImpact),
+      description: `${s.newAccounts} new account${s.newAccounts !== 1 ? 's' : ''}`,
+      color: s.newAccounts === 0 ? 'success' : 'destructive',
+      trend: s.newAccounts === 0 ? 'neutral' : 'down',
+    },
+    {
+      id: 'payoff',
+      title: 'Debt Payoff',
+      icon: 'Target',
+      currentValue: '24 mo',
+      projectedValue: `${s.payoffTimeline} mo`,
+      impact: Math.round(payoffImpact),
+      description: `Complete payoff in ${s.payoffTimeline} months`,
+      color: s.payoffTimeline <= 12 ? 'success' : 'warning',
+      trend: s.payoffTimeline <= 12 ? 'up' : 'neutral',
+    },
+    {
+      id: 'creditLimit',
+      title: 'Credit Limit',
+      icon: 'TrendingUp',
+      currentValue: formatMoney(15000),
+      projectedValue: formatMoney(15000 + s.creditLimit),
+      impact: Math.round(creditLimitImpact),
+      description: `${formatMoney(s.creditLimit)} limit increase`,
+      color: s.creditLimit > 0 ? 'success' : 'muted-foreground',
+      trend: s.creditLimit > 0 ? 'up' : 'neutral',
+    },
+    {
+      id: 'overall',
+      title: 'Overall Impact',
+      icon: 'BarChart3',
+      currentValue: '720',
+      projectedValue: Math.round(
+        baseScore + paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact
+      ),
+      impact: Math.round(paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact),
+      description: 'Combined effect of all changes',
+      color:
+        paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0
+          ? 'success'
+          : 'destructive',
+      trend: paymentImpact + utilizationImpact + newAccountImpact + payoffImpact + creditLimitImpact > 0 ? 'up' : 'down',
+    },
+  ];
 
-  /* ===== DỌC 1 CỘT: giống Progress Timeline ===== */
   return (
     <div className="space-y-4">
       {impacts.map((impact) => {
@@ -167,39 +167,34 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
         return (
           <div
             key={impact.id}
-            className="rounded-2xl border px-5 py-4 flex items-center justify-between"
+            className="rounded-2xl border px-4 py-4 hover:shadow-md transition-shadow flex items-start justify-between gap-4"
             style={{ background: C.card, borderColor: C.border, boxShadow: C.shadow }}
           >
-            {/* Left block: icon + title + meta */}
-            <div className="flex items-start gap-4 min-w-0">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${ac.bg} ${ac.border} border`}>
+            {/* LEFT: icon + text */}
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className={`flex-none w-12 h-12 rounded-xl flex items-center justify-center ${ac.bg} ${ac.border} border`}>
                 <Icon name={impact.icon} size={20} className={ac.text} />
               </div>
 
               <div className="min-w-0">
-                <div className="text-base font-semibold truncate" style={{ color: C.fg }}>
+                <div className="text-[13px] font-semibold tracking-tight" style={{ color: C.fg }}>
                   {impact.title}
                 </div>
 
-                <div className="mt-1 grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <div className="text-xs" style={{ color: C.muted }}>
-                      Current
-                    </div>
-                    <div className="font-medium" style={{ color: C.fg }}>
+                {/* meta: Current + Impact; dùng auto-fit để tự rớt, nhưng giữ kích cỡ tối thiểu nên không xô lệch */}
+                <div
+                  className="mt-1 grid gap-3 text-[11px]"
+                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+                >
+                  <div className="min-w-[120px]">
+                    <div style={{ color: C.muted }}>Current</div>
+                    <div className="font-medium tabular-nums" style={{ color: C.fg }}>
                       {impact.currentValue}
                     </div>
                   </div>
-                  <div>
-                    <div className="text-xs" style={{ color: C.muted }}>
-                      Projected
-                    </div>
-                    <div className={`font-semibold ${ac.text}`}>{impact.projectedValue}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs" style={{ color: C.muted }}>
-                      Impact
-                    </div>
+
+                  <div className="min-w-[120px]">
+                    <div style={{ color: C.muted }}>Impact</div>
                     <div className={`font-bold ${trendTextOf(impact.trend)}`}>
                       {impact.impact > 0 ? `+${impact.impact}` : impact.impact}
                       {impact.id !== 'overall' && ' pts'}
@@ -207,13 +202,12 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
                   </div>
                 </div>
 
-                {/* description / progress */}
                 {!showBar ? (
-                  <p className="mt-2 text-xs" style={{ color: C.muted }}>
+                  <p className="mt-2 text-[11px] leading-relaxed" style={{ color: C.muted }}>
                     {impact.description}
                   </p>
                 ) : (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <div className="w-full rounded-full h-2 bg-slate-100" role="progressbar" aria-valuemin={-50} aria-valuemax={50}>
                       <div
                         className={`h-2 rounded-full transition-all duration-500 ${
@@ -222,7 +216,7 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
                         style={{ width: `${Math.min(100, Math.abs(impact.impact) * 2)}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-xs mt-1" style={{ color: C.muted }}>
+                    <div className="flex justify-between text-[11px] mt-1" style={{ color: C.muted }}>
                       <span>0</span>
                       <span>+50 pts</span>
                     </div>
@@ -231,17 +225,19 @@ export default function ImpactSummaryCards({ currentScenario }: ImpactSummaryCar
               </div>
             </div>
 
-            {/* Right block: trend icon + big value (giống ô số ở timeline) */}
-            <div className="ml-6 text-right shrink-0">
-              <Icon name={trendIconOf(impact.trend)} size={18} className={`mx-auto ${trendTextOf(impact.trend)} mb-1`} />
-              <div className="text-2xl font-bold" style={{ color: C.fg }}>
-                {impact.id === 'overall' ? impact.projectedValue : impact.projectedValue}
+            {/* RIGHT: projected block (cột cố định) */}
+            <div className="shrink-0 text-right w-[128px] sm:w-[144px] md:w-[160px]">
+              <Icon name={trendIconOf(impact.trend)} size={16} className={`inline-block ${trendTextOf(impact.trend)} mb-1`} />
+              <div
+                className={`${bigSize(impact.projectedValue)} font-extrabold leading-6 tabular-nums break-words`}
+                style={{ color: C.fg }}
+                title={String(impact.projectedValue)}
+              >
+                {impact.projectedValue}
               </div>
-              {impact.id === 'overall' && (
-                <div className="text-xs" style={{ color: C.muted }}>
-                  projected
-                </div>
-              )}
+              <div className="text-[11px]" style={{ color: C.muted }}>
+                projected
+              </div>
             </div>
           </div>
         );

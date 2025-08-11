@@ -1,6 +1,7 @@
+// src/pages/dashboard/what-if-scenario-simulator-dashboard/components/ScenarioVisualization.tsx
 'use client';
 
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useEffect, useState, ChangeEvent } from 'react';
 import {
   Line,
   Area,
@@ -9,11 +10,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import Icon from '@/components/AppIcon';
-import Button from '@/components/ui/Button';
 
 interface Scenario {
   paymentAmount?: number;
@@ -29,91 +28,115 @@ interface ScenarioVisualizationProps {
   selectedTimeframe?: number;
 }
 
+type ChartType = 'line' | 'area';
+
 interface ChartDataPoint {
   month: number;
   monthLabel: string;
   current: number | null;
   simulated: number | null;
-  confidenceUpper: number | null;
-  confidenceLower: number | null;
-  date: string;
+  confHi: number | null;
+  confLo: number | null;
 }
+
+const NEON   = 'var(--color-neon, #12F7A0)';
+const FG     = 'var(--color-foreground, #0F172A)';
+const BORDER = 'var(--color-border, #E5E7EB)';
 
 export default function ScenarioVisualization({
   currentScenario,
-  selectedTimeframe = 12
+  selectedTimeframe = 12,
 }: ScenarioVisualizationProps) {
-  const [activeScenarios, setActiveScenarios] = useState<string[]>(['current', 'simulated']);
-  const [chartType, setChartType] = useState<'line' | 'area'>('line');
-  const [showConfidenceInterval, setShowConfidenceInterval] = useState<boolean>(true);
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [active, setActive] = useState<string[]>(['current', 'simulated']);
+  const [chartType, setChartType] = useState<ChartType>('line');
+  const [showCI, setShowCI] = useState(true);
+  const [data, setData] = useState<ChartDataPoint[]>([]);
+  const [loadingRemote, setLoadingRemote] = useState(false);
 
-  const generateScenarioData = (scenario: Scenario | {}, type: 'simulated' | 'current') => {
+  // ---------- helpers ----------
+  const generateLocal = (scenario: Scenario | {}, type: 'simulated' | 'current'): ChartDataPoint[] => {
     const baseScore = 720;
     const months = selectedTimeframe;
-    const data: ChartDataPoint[] = [];
+    const rows: ChartDataPoint[] = [];
 
     for (let i = 0; i <= months; i++) {
-      let scoreChange = 0;
+      let delta = 0;
 
       if (type === 'simulated' && 'paymentAmount' in scenario) {
         const s = scenario as Scenario;
-        const paymentImpact = (s.paymentAmount! / 100) * 0.5;
-        const utilizationImpact = Math.abs(s.utilizationChange!) * 0.8;
-        const newAccountImpact = s.newAccounts! * -5;
-        const payoffImpact = s.payoffTimeline! <= 12 ? 15 : 8;
-        const creditLimitImpact = (s.creditLimit! / 1000) * 0.3;
-        scoreChange = (paymentImpact + utilizationImpact + payoffImpact + creditLimitImpact + newAccountImpact) * (i / months);
+        const pay   = (s.paymentAmount ?? 0) / 100 * 0.6;
+        const util  = Math.abs(s.utilizationChange ?? 0) * 1.0;
+        const newA  = (s.newAccounts ?? 0) * -5;
+        const payoff= (s.payoffTimeline ?? 12) <= 12 ? 14 : 8;
+        const limit = (s.creditLimit ?? 0) / 1000 * 0.4;
+        const total = pay + util + newA + payoff + limit;
+        delta = total * (i / months);
       } else {
-        scoreChange = Math.random() * 10 - 5;
+        delta = Math.sin(i / 3) * 2;
       }
 
-      const score = Math.min(850, Math.max(300, baseScore + scoreChange));
-      const confidenceUpper = Math.min(850, score + (Math.random() * 20 + 10));
-      const confidenceLower = Math.max(300, score - (Math.random() * 15 + 8));
+      const score = Math.min(850, Math.max(300, baseScore + delta));
+      const hi = Math.min(850, score + 12 + Math.random() * 10);
+      const lo = Math.max(300, score - 10 - Math.random() * 8);
 
-      data.push({
+      rows.push({
         month: i,
-        monthLabel: i === 0 ? 'Now' : `${i}mo`,
-        current: type === 'current' ? score : null,
+        monthLabel: i === 0 ? 'Now' : `${i} mo`,
+        current:   type === 'current'   ? score : null,
         simulated: type === 'simulated' ? score : null,
-        confidenceUpper: type === 'simulated' ? confidenceUpper : null,
-        confidenceLower: type === 'simulated' ? confidenceLower : null,
-        date: new Date(2025, 0, 1 + i * 30).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        confHi:    type === 'simulated' ? hi    : null,
+        confLo:    type === 'simulated' ? lo    : null,
       });
     }
-
-    return data;
+    return rows;
   };
 
+  // Try mock backend first; fallback to local
   useEffect(() => {
-    if (currentScenario) {
-      const simulatedData = generateScenarioData(currentScenario, 'simulated');
-      const currentData = generateScenarioData({}, 'current');
-      const merged = simulatedData.map((point, idx) => ({
-        ...point,
-        current: currentData[idx]?.current ?? point.current
-      }));
-      setChartData(merged);
-    }
+    let cancelled = false;
+    (async () => {
+      setLoadingRemote(true);
+      try {
+        const res = await fetch(`/api/mock/simulator/projection?months=${selectedTimeframe}`);
+        if (!res.ok) throw new Error('mock api not available');
+        const json = await res.json();
+        const rows: ChartDataPoint[] = (json?.data ?? []).map((r: any) => ({
+          month: r.month,
+          monthLabel: r.monthLabel ?? (r.month === 0 ? 'Now' : `${r.month} mo`),
+          current: r.current ?? null,
+          simulated: r.simulated ?? null,
+          confHi: r.confHi ?? null,
+          confLo: r.confLo ?? null,
+        }));
+        if (!cancelled && rows.length) setData(rows);
+        if (!rows.length) throw new Error('empty');
+      } catch {
+        const sim = generateLocal(currentScenario ?? {}, 'simulated');
+        const cur = generateLocal({}, 'current');
+        const merged = sim.map((p, i) => ({ ...p, current: cur[i]?.current ?? null }));
+        if (!cancelled) setData(merged);
+      } finally {
+        if (!cancelled) setLoadingRemote(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScenario, selectedTimeframe]);
 
-  const toggleScenario = (type: string) => {
-    setActiveScenarios(prev =>
-      prev.includes(type) ? prev.filter(v => v !== type) : [...prev, type]
-    );
-  };
+  const toggle = (k: 'current' | 'simulated') =>
+    setActive((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload?.length) {
       return (
-        <div className="bg-popover border border-border rounded-lg shadow-elevation-2 p-4">
-          <p className="text-sm font-medium text-popover-foreground mb-2">{`Month ${label}`}</p>
-          {payload.map((entry: any, i: number) => (
-            <div key={i} className="flex items-center space-x-2 text-sm">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-muted-foreground">{entry.name}:</span>
-              <span className="font-semibold text-foreground">{Math.round(entry.value)}</span>
+        <div className="rounded-xl border p-3 bg-white/95 backdrop-blur-sm"
+             style={{ borderColor: BORDER, color: FG }}>
+          <div className="text-xs font-medium mb-1">{label}</div>
+          {payload.map((p: any, idx: number) => (
+            <div key={idx} className="flex items-center gap-2 text-xs">
+              <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />
+              <span className="opacity-80">{p.name}:</span>
+              <span className="font-semibold">{Math.round(p.value)}</span>
             </div>
           ))}
         </div>
@@ -122,104 +145,238 @@ export default function ScenarioVisualization({
     return null;
   };
 
+  // summary numbers
+  const last = data[data.length - 1];
+  const projected = Math.round(last?.simulated ?? 720);
+  const delta = projected - 720;
+  const timeToTarget = Math.round(selectedTimeframe * 0.67);
+  const confidence = 87;
+
+  const lineOpacity = chartType === 'line' ? 1 : 0;
+  const areaOpacity = chartType === 'area' ? 1 : 0;
+
   return (
-    <div className="bg-card border border-border rounded-lg shadow-elevation-1">
+    <div className="rounded-xl border bg-card" style={{ borderColor: BORDER }}>
       {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center">
-              <Icon name="TrendingUp" size={20} className="text-secondary" />
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                 style={{ background: 'rgba(18,247,160,0.12)' }}>
+              <Icon name="TrendingUp" size={18} style={{ color: NEON }} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground">Score Projection</h3>
-              <p className="text-sm text-muted-foreground">Compare current vs simulated trajectory</p>
+              <h3 className="text-lg font-semibold" style={{ color: FG }}>Score Projection</h3>
+              <p className="text-sm" style={{ color: FG, opacity: 0.8 }}>
+                Compare current vs simulated trajectory
+              </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button variant={chartType === 'line' ? 'default' : 'outline'} size="sm" iconName="TrendingUp" onClick={() => setChartType('line')}>Line</Button>
-            <Button variant={chartType === 'area' ? 'default' : 'outline'} size="sm" iconName="AreaChart" onClick={() => setChartType('area')}>Area</Button>
+
+          {/* Neon pill toggle */}
+          <div className="inline-flex items-center rounded-full p-1"
+               style={{ background: 'rgba(18,247,160,0.12)', border: `1px solid ${NEON}` }}>
+            <button
+              type="button"
+              onClick={() => setChartType('line')}
+              className={`px-3 h-8 rounded-full text-sm font-medium transition-all focus:outline-none
+                ${chartType === 'line'
+                  ? 'bg-[var(--color-neon,#12F7A0)] text-[#0F172A]'
+                  : 'text-[var(--color-foreground,#0F172A)]/85 hover:bg-white/60'}`}
+              aria-pressed={chartType === 'line'}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Icon name="LineChart" size={14} />
+                Line
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartType('area')}
+              className={`px-3 h-8 rounded-full text-sm font-medium transition-all focus:outline-none
+                ${chartType === 'area'
+                  ? 'bg-[var(--color-neon,#12F7A0)] text-[#0F172A]'
+                  : 'text-[var(--color-foreground,#0F172A)]/85 hover:bg-white/60'}`}
+              aria-pressed={chartType === 'area'}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Icon name="AreaChart" size={14} />
+                Area
+              </span>
+            </button>
           </div>
         </div>
-        {/* Chart Controls */}
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={activeScenarios.includes('current')} onChange={() => toggleScenario('current')} className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary" />
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-muted-foreground rounded-full" />
-              <span className="text-sm text-foreground">Current Trajectory</span>
-            </div>
+
+        {/* Switches */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={active.includes('current')}
+              onChange={() => toggle('current')}
+              className="size-4 rounded border"
+              style={{ accentColor: FG, borderColor: BORDER }}
+            />
+            <span className="inline-flex items-center gap-2 text-sm" style={{ color: FG }}>
+              <span className="inline-block size-2.5 rounded-full" style={{ background: '#6b7280' }} />
+              Current Trajectory
+            </span>
           </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={activeScenarios.includes('simulated')} onChange={() => toggleScenario('simulated')} className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary" />
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-primary rounded-full" />
-              <span className="text-sm text-foreground">Simulated Scenario</span>
-            </div>
+
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={active.includes('simulated')}
+              onChange={() => toggle('simulated')}
+              className="size-4 rounded border"
+              style={{ accentColor: NEON, borderColor: BORDER }}
+            />
+            <span className="inline-flex items-center gap-2 text-sm" style={{ color: FG }}>
+              <span className="inline-block size-2.5 rounded-full" style={{ background: NEON }} />
+              Simulated Scenario
+            </span>
           </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={showConfidenceInterval} onChange={(e: ChangeEvent<HTMLInputElement>) => setShowConfidenceInterval(e.target.checked)} className="w-4 h-4 text-secondary bg-background border-border rounded focus:ring-secondary" />
-            <span className="text-sm text-foreground">Confidence Interval</span>
+
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showCI}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setShowCI(e.target.checked)}
+              className="size-4 rounded border"
+              style={{ accentColor: NEON, borderColor: BORDER }}
+            />
+            <span className="text-sm" style={{ color: FG }}>Confidence Interval</span>
           </label>
         </div>
       </div>
+
       {/* Chart */}
-      <div className="p-6">
-        <div className="h-80 w-full">
+      <div className="px-4 pb-2 pt-2">
+        <div className="h-64 md:h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="monthLabel" stroke="var(--color-muted-foreground)" fontSize={12} />
-              <YAxis domain={[650, 800]} stroke="var(--color-muted-foreground)" fontSize={12} />
+            <ComposedChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+              <defs>
+                <linearGradient id="simFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={NEON} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={NEON} stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={BORDER} />
+              <XAxis dataKey="monthLabel" stroke={FG} tick={{ fontSize: 12, fill: FG }} />
+              <YAxis domain={[650, 800]}    stroke={FG} tick={{ fontSize: 12, fill: FG }} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              {showConfidenceInterval && activeScenarios.includes('simulated') && (
-                <Area type="monotone" dataKey="confidenceUpper" stroke="none" fill="var(--color-primary)" fillOpacity={0.1} name="Confidence Range" />
+
+              {showCI && active.includes('simulated') && (
+                <Area
+                  type="monotone"
+                  dataKey="confHi"
+                  stroke="none"
+                  fill="url(#simFill)"
+                  name="Confidence Range"
+                  isAnimationActive={false}
+                  style={{ transition: 'opacity .25s ease', opacity: active.includes('simulated') ? 1 : 0 }}
+                />
               )}
-              {activeScenarios.includes('current') && (
-                <Line type="monotone" dataKey="current" stroke="var(--color-muted-foreground)" strokeWidth={2} strokeDasharray="5 5" dot={{ r:4 }} name="Current Trajectory" />
+
+              {active.includes('current') && (
+                <Line
+                  type="monotone"
+                  dataKey="current"
+                  stroke="#6B7280"
+                  strokeDasharray="5 5"
+                  dot={{ r: 3 }}
+                  strokeWidth={2}
+                  isAnimationActive={false}
+                />
               )}
-              {activeScenarios.includes('simulated') && (
-                chartType === 'line' ? (
-                  <Line type="monotone" dataKey="simulated" stroke="var(--color-primary)" strokeWidth={3} dot={{ r:5 }} name="Simulated Scenario" />
-                ) : (
-                  <Area type="monotone" dataKey="simulated" stroke="var(--color-primary)" fill="var(--color-primary)" fillOpacity={0.3} name="Simulated Scenario" />
-                )
-              )}
+
+              {/* Simulated – fade swap */}
+              <Line
+                type="monotone"
+                dataKey="simulated"
+                stroke={NEON}
+                strokeWidth={3}
+                dot={{ r: 0 }}
+                isAnimationActive={false}
+                name="Simulated Scenario (Line)"
+                style={{ transition: 'opacity .24s ease', opacity: chartType === 'line' ? 1 : 0 }}
+              />
+              <Area
+                type="monotone"
+                dataKey="simulated"
+                stroke={NEON}
+                fill="url(#simFill)"
+                isAnimationActive={false}
+                name="Simulated Scenario (Area)"
+                style={{ transition: 'opacity .24s ease', opacity: chartType === 'area' ? 1 : 0 }}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        {/* Chart Summary Blocks */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Icon name="Target" size={16} className="text-success" />
-              <span className="text-sm font-medium text-foreground">Projected Score</span>
+
+        {/* Legend */}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: FG }}>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-4 h-2 rounded-full" style={{ background: 'rgba(18,247,160,.3)' }} />
+            Confidence Range
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-4 h-[2px] bg-[#6B7280]" /> Current Trajectory
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-4 h-[2px]" style={{ background: NEON }} /> Simulated Scenario
+          </span>
+        </div>
+      </div>
+
+      {/* Summary – ONLY change: force 3 rows cùng dòng bằng min-h */}
+      <div className="px-2 pb-5">
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
+          {/* Projected */}
+          <div className="flex flex-col">
+            {/* Row 1: Title */}
+            <div className="flex items-center gap-2 text-[15px] font-semibold min-h-[24px]" style={{ color: FG }}>
+              <Icon name="Target" size={16} style={{ color: NEON }} />
+              <span>Projected Score</span>
             </div>
-            <div className="text-2xl font-bold text-success">
-              {chartData.length > 0 ? Math.round(chartData[chartData.length - 1].simulated || 720) : 720}
+            {/* Row 2: Big number */}
+            <div className="mt-1 text-3xl md:text-4xl font-extrabold leading-none min-h-[44px] md:min-h-[48px]"
+                 style={{ color: NEON }}>
+              {projected}
             </div>
-            <div className="text-xs text-muted-foreground">
-              +{chartData.length > 0 ? Math.round((chartData[chartData.length - 1].simulated || 720) - 720) : 0} points
+            {/* Row 3: Subtext */}
+            <div className="text-xs min-h-[32px] flex items-end" style={{ color: FG, opacity: 0.9 }}>
+              {delta >= 0 ? `+${delta}` : delta} points
             </div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-2">
+
+          {/* Time to Target */}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-[15px] font-semibold min-h-[24px]" style={{ color: FG }}>
               <Icon name="Clock" size={16} className="text-warning" />
-              <span className="text-sm font-medium text-foreground">Time to Target</span>
+              <span>Time to Target</span>
             </div>
-            <div className="text-2xl font-bold text-warning">
-              {Math.round(selectedTimeframe * 0.7)} mo
+            <div className="mt-1 text-3xl md:text-4xl font-extrabold leading-none min-h-[44px] md:min-h-[48px] text-orange-500">
+              {timeToTarget} <span className="font-bold">mo</span>
             </div>
-            <div className="text-xs text-muted-foreground">To reach 750+ score</div>
+            <div className="text-xs min-h-[32px] flex items-end" style={{ color: FG, opacity: 0.9 }}>
+              To reach 750+ score
+            </div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Icon name="TrendingUp" size={16} className="text-primary" />
-              <span className="text-sm font-medium text-foreground">Confidence</span>
+
+          {/* Confidence */}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-[15px] font-semibold min-h-[24px]" style={{ color: FG }}>
+              <Icon name="TrendingUp" size={16} style={{ color: NEON }} />
+              <span>Confidence</span>
             </div>
-            <div className="text-2xl font-bold text-primary">87%</div>
-            <div className="text-xs text-muted-foreground">Prediction accuracy</div>
+            <div className="mt-1 text-3xl md:text-4xl font-extrabold leading-none min-h-[44px] md:min-h-[48px]"
+                 style={{ color: NEON }}>
+              {confidence}%
+            </div>
+            <div className="text-xs min-h-[32px] flex items-end" style={{ color: FG, opacity: 0.9 }}>
+              Prediction accuracy
+            </div>
           </div>
         </div>
       </div>
