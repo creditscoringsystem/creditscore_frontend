@@ -5,9 +5,9 @@ interface Props {
   onBackToLogin: () => void;
 }
 
-const sendResetCode = async (_email: string) => Promise.resolve();
-const verifyResetCode = async (_email: string, _code: string) => Promise.resolve();
-const resetPassword = async (_email: string, _code: string, _newPwd: string) => Promise.resolve();
+const sendResetCode = async (_email: string) => { void _email; return Promise.resolve(); };
+const verifyResetCode = async (_email: string, _code: string) => { void _email; void _code; return Promise.resolve(); };
+const resetPassword = async (_email: string, _code: string, _newPwd: string) => { void _email; void _code; void _newPwd; return Promise.resolve(); };
 
 const validatePasswordStrength = (password: string): string | null => {
   if (password.length < 8) return "Password must be at least 8 characters long.";

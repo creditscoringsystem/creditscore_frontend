@@ -27,15 +27,16 @@ const Footer: React.FC = () => (
            }} />
 
       {/* Logo + Brand */}
-<div className="flex flex-col mt-5">
-  <div className="flex items-center space-x-2">
-    <img src="/logo.svg" alt="Credit Scoring System Logo" className="h-10 w-auto" />
-    <span className="font-semibold text-lg text-white">Credit Scoring System</span>
-  </div>
-  <span className="text-xs font-normal text-white mt-2 ml-13">
-    Unlock your credit potential with confidence.
-  </span>
-</div>
+      <div className="flex flex-col mt-5">
+        <div className="flex items-center space-x-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Credit Scoring System Logo" className="h-10 w-auto" />
+          <span className="font-semibold text-lg text-white">Credit Scoring System</span>
+        </div>
+        <span className="text-xs font-normal text-white mt-2 ml-13">
+          Unlock your credit potential with confidence.
+        </span>
+      </div>
 
       {/* Menu + Info */}
       <div className="hidden md:flex flex-row gap-9 text-sm mt-6 md:mt-0 z-10">

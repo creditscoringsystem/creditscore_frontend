@@ -22,8 +22,9 @@ function Icon({
   strokeWidth = 2,
   ...props
 }: IconProps) {
-  const IconComponent =
-    (LucideIcons as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>)[name];
+const IconComponent =
+  (LucideIcons as unknown as Record<string, React.ComponentType<any>>)[name as string];
+
 
   if (!IconComponent) {
     return (

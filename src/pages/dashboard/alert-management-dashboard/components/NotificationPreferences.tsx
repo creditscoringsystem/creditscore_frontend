@@ -1,3 +1,4 @@
+// src/pages/dashboard/alert-management-dashboard/components/NotificationPreferences.tsx
 'use client';
 
 import React, { useState, ChangeEvent, FormEvent } from 'react';
@@ -81,7 +82,7 @@ export default function NotificationPreferences({
                 </p>
               )}
             </div>
-            <span 
+            <span
               className="text-sm font-semibold"
               title={`Expected score change: ${pref.score_change ?? 0} pts`}
             >
@@ -102,7 +103,8 @@ export default function NotificationPreferences({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" variant="primary">
+        {/* 🔧 Sửa 'primary' -> 'success' (hợp lệ theo Button) */}
+        <Button type="submit" variant="success">
           Save Preferences
         </Button>
       </div>

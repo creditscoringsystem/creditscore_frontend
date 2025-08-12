@@ -1,18 +1,11 @@
-// pages/credit-factor-analysis-dashboard/components/FactorCorrelationHeatmap.tsx
+// src/pages/dashboard/credit-factor-analysis-dashboard/components/FactorCorrelationHeatmap.tsx
 // Next.js + TypeScript — UI/behaviour untouched
 'use client';
+
 import { cn } from '@/utils/cn';
 import Icon from '@/components/AppIcon';
 import { FactorKey } from '@/types/factors';
 import React, { useState, useMemo } from 'react';
-import Icon from '@/components/AppIcon';
-
-type FactorKey =
-  | 'payment_history'
-  | 'utilization'
-  | 'credit_age'
-  | 'new_credit'
-  | 'credit_mix';
 
 interface Factor {
   key: FactorKey;

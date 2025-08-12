@@ -1,5 +1,6 @@
 // src/components/FeaturesSection.tsx
 'use client';
+import type React from 'react';
 
 import { motion, Variants } from 'framer-motion';
 import {
@@ -13,7 +14,7 @@ type Pillar = {
   title: string;
   tagline: string;
   expandedText: string;
-  Icon: (props: React.ComponentProps<'svg'>) => JSX.Element;
+  Icon: React.ComponentType<React.ComponentProps<'svg'>>;
   gradient: string;
   textColor: string;
 };

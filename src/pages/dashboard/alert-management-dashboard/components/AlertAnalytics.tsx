@@ -1,3 +1,5 @@
+// src/pages/dashboard/alert-management-dashboard/components/AlertAnalytics.tsx
+// This file contains the AlertAnalytics component which displays various analytics related to alerts in the dashboard.
 'use client';
 
 import React from 'react';

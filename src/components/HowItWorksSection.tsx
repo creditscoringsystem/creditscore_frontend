@@ -1,4 +1,5 @@
 'use client';
+import type React from 'react';
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -12,7 +13,8 @@ import {
 interface Step {
   title: string;
   desc: string;
-  Icon: (props: React.ComponentProps<'svg'>) => JSX.Element;
+  // Sửa kiểu để tương thích heroicons (ForwardRefExoticComponent)
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
 const steps: Step[] = [
@@ -93,6 +95,7 @@ export default function HowItWorksSection() {
 
   /* calc % vị trí tia sáng trên đường nối */
   const streakX = `${active * 33.333}%`; // 0 % → 33.3 % → 66.6 % → 100 %
+  void streakX; // tránh cảnh báo biến chưa dùng
 
   return (
     <section id="how-it-works"
@@ -129,7 +132,6 @@ export default function HowItWorksSection() {
           score.
         </p>
       </div>
-
 
       {/* ===== cards ===== */}
       <ol className="relative mx-auto mt-16 grid max-w-6xl gap-8 px-6

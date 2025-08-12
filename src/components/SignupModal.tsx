@@ -147,6 +147,7 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
 
           {/* Image */}
           <div className="hidden md:block w-1/2 h-full overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/signup-illustration.jpeg"
               alt="signup illustration"

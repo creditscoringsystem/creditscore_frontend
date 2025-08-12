@@ -1,3 +1,7 @@
+// tailwind.config.js
+// This is the Tailwind CSS configuration file for a Next.js project.
+// It specifies the content paths, theme extensions, and plugins used in the project.
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [

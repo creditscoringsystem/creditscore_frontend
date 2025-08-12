@@ -33,6 +33,9 @@ const AlertManagementDashboard: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ Controlled state cho Sidebar để thỏa SidebarProps
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   /* filters */
   const [filters, setFilters] = useState<AlertFiltersState>({
     type: 'all',
@@ -145,7 +148,7 @@ const AlertManagementDashboard: React.FC = () => {
   if (isLoading)
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
         <div className="flex-1 ml-80">
           <Header />
           <main className="pt-20 px-6 py-8 flex flex-col items-center">
@@ -159,7 +162,7 @@ const AlertManagementDashboard: React.FC = () => {
   /* ui — dashboard */
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 ml-80">
         <Header />
 
