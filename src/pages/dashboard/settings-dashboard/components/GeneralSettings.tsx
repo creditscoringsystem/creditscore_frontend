@@ -1,9 +1,9 @@
+// src/pages/dashboard/settings-dashboard/components/GeneralSettings.tsx
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/AppIcon'
-
 
 type ThemeOption = 'neon-dark' | 'neon-blue' | 'neon-purple'
 type LayoutOption = 'grid' | 'list' | 'compact'
@@ -51,7 +51,7 @@ const GeneralSettings: React.FC = () => {
               <label className="block text-sm font-medium text-foreground mb-2">Color Theme</label>
               <Select
                 value={settings.theme}
-                onValueChange={(v: ThemeOption) => handleSettingChange('theme', v)}
+                onChange={(v) => handleSettingChange('theme', v as ThemeOption)}
                 options={[
                   { value: 'neon-dark', label: 'Neon Dark (Current)' },
                   { value: 'neon-blue', label: 'Neon Blue' },
@@ -90,7 +90,7 @@ const GeneralSettings: React.FC = () => {
               <label className="block text-sm font-medium text-foreground mb-2">Layout Style</label>
               <Select
                 value={settings.dashboardLayout}
-                onValueChange={(v: LayoutOption) => handleSettingChange('dashboardLayout', v)}
+                onChange={(v) => handleSettingChange('dashboardLayout', v as LayoutOption)}
                 options={[
                   { value: 'grid', label: 'Grid Layout' },
                   { value: 'list', label: 'List Layout' },
@@ -103,7 +103,7 @@ const GeneralSettings: React.FC = () => {
               <label className="block text-sm font-medium text-foreground mb-2">Data Visualization</label>
               <Select
                 value={settings.dataVisualization}
-                onValueChange={(v: DataVisOption) => handleSettingChange('dataVisualization', v)}
+                onChange={(v) => handleSettingChange('dataVisualization', v as DataVisOption)}
                 options={[
                   { value: 'enhanced', label: 'Enhanced (with effects)' },
                   { value: 'standard', label: 'Standard' },
@@ -127,7 +127,7 @@ const GeneralSettings: React.FC = () => {
               <label className="block text-sm font-medium text-foreground mb-2">Default Time Range</label>
               <Select
                 value={settings.defaultTimeRange}
-                onValueChange={(v: TimeRangeOption) => handleSettingChange('defaultTimeRange', v)}
+                onChange={(v) => handleSettingChange('defaultTimeRange', v as TimeRangeOption)}
                 options={[
                   { value: '3months', label: '3 Months' },
                   { value: '6months', label: '6 Months' },

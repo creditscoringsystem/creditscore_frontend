@@ -4,7 +4,7 @@
 
 import React from 'react';
 import Icon from '@/components/AppIcon';
-import { useCurrency } from '@/pages/dashboard/what-if-scenario-simulator-dashboard/components/CurrencyContext';
+import { useCurrency } from '@/features/simulator/CurrencyContext';
 
 interface Scenario {
   paymentAmount: number;

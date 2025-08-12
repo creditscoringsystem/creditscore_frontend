@@ -1,10 +1,11 @@
+// src/pages/dashboard/what-if-scenario-simulator-dashboard/components/ScenarioControlPanel.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Icon from '@/components/AppIcon';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { useCurrency } from './CurrencyContext';
+import { useCurrency } from '@/features/simulator/CurrencyContext';
 
 export interface Scenario {
   paymentAmount: number;
@@ -58,7 +59,7 @@ export default function ScenarioControlPanel({
   const [scenario, setScenario] = useState<Scenario>(defaultScenario);
   const [scenarioName, setScenarioName] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
-  const changeTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const changeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { if (currentScenario) setScenario(currentScenario); }, [currentScenario]);
   useEffect(() => () => { if (changeTimeout.current) clearTimeout(changeTimeout.current); }, []);

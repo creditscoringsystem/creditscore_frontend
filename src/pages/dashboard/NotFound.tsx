@@ -1,3 +1,4 @@
+// src/pages/dashboard/NotFound.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -19,19 +20,17 @@ export default function NotFoundPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button
-            variant="primary"
-            icon={<Icon name="ArrowLeft" />}
-            iconPosition="left"
+            variant="default"
             onClick={() => router.back()}
           >
+            <Icon name="ArrowLeft" size={16} className="-ml-1 mr-2" />
             Go Back
           </Button>
           <Button
             variant="outline"
-            icon={<Icon name="Home" />}
-            iconPosition="left"
             onClick={() => router.push('/')}
           >
+            <Icon name="Home" size={16} className="-ml-1 mr-2" />
             Back to Home
           </Button>
         </div>

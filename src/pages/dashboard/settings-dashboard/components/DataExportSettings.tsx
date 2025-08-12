@@ -1,3 +1,4 @@
+// src/pages/dashboard/settings-dashboard/components/DataExportSettings.tsx
 'use client';
 
 import { useState } from 'react';
@@ -24,9 +25,9 @@ export default function DataExportSettings() {
 
   const exportOptions: ExportOption[] = [
     { id: 'credit-report',    title: 'Credit Report',     description: 'Complete credit report with scores and factors',    icon: 'FileText',   size: '2.4 MB', lastExported: '2 weeks ago' },
-    { id: 'score-history',    title: 'Score History',     description: 'Historical credit score data and trends',       icon: 'TrendingUp', size: '856 KB', lastExported: '1 month ago' },
-    { id: 'analytics-data',   title: 'Analytics Data',    description: 'Detailed analytics and performance metrics',     icon: 'BarChart',    size: '3.1 MB', lastExported: 'Never' },
-    { id: 'account-activity', title: 'Account Activity',  description: 'Login history and account changes',             icon: 'Activity',    size: '245 KB', lastExported: '3 days ago' },
+    { id: 'score-history',    title: 'Score History',     description: 'Historical credit score data and trends',           icon: 'TrendingUp', size: '856 KB', lastExported: '1 month ago' },
+    { id: 'analytics-data',   title: 'Analytics Data',    description: 'Detailed analytics and performance metrics',        icon: 'BarChart',   size: '3.1 MB', lastExported: 'Never' },
+    { id: 'account-activity', title: 'Account Activity',  description: 'Login history and account changes',                icon: 'Activity',   size: '245 KB', lastExported: '3 days ago' },
   ];
 
   const handleExport = (exportId: string) => {
@@ -61,7 +62,7 @@ export default function DataExportSettings() {
               </label>
               <Select
                 value={selectedFormat}
-                onValueChange={setSelectedFormat}
+                onChange={(v) => setSelectedFormat(v as 'pdf' | 'csv' | 'json' | 'xlsx')}
                 options={[
                   { value: 'pdf',  label: 'PDF Document' },
                   { value: 'csv',  label: 'CSV Spreadsheet' },
@@ -77,7 +78,7 @@ export default function DataExportSettings() {
               </label>
               <Select
                 value={selectedTimeRange}
-                onValueChange={setSelectedTimeRange}
+                onChange={(v) => setSelectedTimeRange(v as '3months' | '6months' | '1year' | 'all')}
                 options={[
                   { value: '3months', label: 'Last 3 Months' },
                   { value: '6months', label: 'Last 6 Months' },

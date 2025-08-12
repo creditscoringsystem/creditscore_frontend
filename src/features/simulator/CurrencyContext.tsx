@@ -32,7 +32,6 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
   const formatMoney = useMemo(() => {
     if (currency === 'VND') {
-      // 500.000.000 ₫ (có space trước ký hiệu)
       const fmt = new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND',
@@ -40,7 +39,6 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       });
       return (amount: number) => fmt.format(amount).replace('\u00A0', ' ');
     }
-    // USD: $20,000.00
     const fmt = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -51,12 +49,25 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   }, [currency]);
 
   const value: Ctx = { currency, setCurrency, formatMoney };
-
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }
 
-export function useCurrency() {
+export function useCurrency(): Ctx {
   const ctx = useContext(CurrencyContext);
-  if (!ctx) throw new Error('useCurrency must be used inside <CurrencyProvider>');
-  return ctx;
+  if (ctx) return ctx;
+
+  // 🔒 Fallback an toàn cho trường hợp component bị prerender riêng lẻ (không có Provider)
+  const formatUSD = (amount: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+
+  return {
+    currency: 'USD',
+    setCurrency: () => {},
+    formatMoney: formatUSD,
+  };
 }

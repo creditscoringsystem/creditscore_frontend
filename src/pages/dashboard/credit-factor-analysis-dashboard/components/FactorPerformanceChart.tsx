@@ -1,9 +1,10 @@
-// pages/credit-factor-analysis-dashboard/components/FactorPerformanceChart.tsx
+// src/pages/dashboard/credit-factor-analysis-dashboard/components/FactorPerformanceChart.tsx
 // Next.js + TypeScript – presentation & behaviour unchanged
 'use client';
+
 import { cn } from '@/utils/cn';
 import Icon from '@/components/AppIcon';
-import { FactorKey } from '@/types/factors';
+// import { FactorKey } from '@/types/factors'; // ❌ file không tồn tại, bỏ import
 import React, { useState, useMemo } from 'react';
 import {
   ComposedChart,
@@ -16,8 +17,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import Icon from '@/components/AppIcon';
+// import Icon from '@/components/AppIcon'; // ❌ trùng, bỏ dòng này
 
+// ✅ Khai báo cục bộ thay cho import bị thiếu
 type FactorKey =
   | 'payment_history'
   | 'utilization'
@@ -25,12 +27,15 @@ type FactorKey =
   | 'new_credit'
   | 'credit_mix';
 
-type PeriodData = Record<
-  | 'period'
-  | `${FactorKey}`
-  | `${FactorKey}_impact`,
-  string | number
->;
+// ✅ Nới kiểu để khớp dữ liệu hiện tại (payment_impact, age_impact, …)
+type ImpactKey =
+  | 'payment_impact'
+  | 'utilization_impact'
+  | 'age_impact'
+  | 'new_impact'
+  | 'mix_impact';
+
+type PeriodData = Record<'period' | FactorKey | ImpactKey, string | number>;
 
 interface FactorPerformanceChartProps {
   /** not used for now – kept for API-compat */
@@ -118,7 +123,7 @@ const FactorPerformanceChart: React.FC<FactorPerformanceChartProps> = ({
   /* cfg */
   const factorConfig: Record<
     FactorKey,
-    { color: string; name: string; impact: `${FactorKey}_impact` }
+    { color: string; name: string; impact: ImpactKey }
   > = {
     payment_history: {
       color: '#10B981',
@@ -213,9 +218,7 @@ const FactorPerformanceChart: React.FC<FactorPerformanceChartProps> = ({
 
       {/* toggles */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {(
-          Object.keys(factorConfig) as FactorKey[]
-        ).map(key => (
+        {(Object.keys(factorConfig) as FactorKey[]).map(key => (
           <button
             key={key}
             onClick={() => toggleFactor(key)}

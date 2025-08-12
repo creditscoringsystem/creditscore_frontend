@@ -11,7 +11,7 @@ import TimelineSlider from './components/TimelineSlider';
 import ImpactSummaryCards from './components/ImpactSummaryCards';
 import ScenarioComparison from './components/ScenarioComparison';
 
-import { CurrencyProvider, useCurrency } from './components/CurrencyContext';
+import { CurrencyProvider, useCurrency } from '@/features/simulator/CurrencyContext';
 
 import {
   fetchSimulator,
@@ -103,6 +103,24 @@ export default function SimulatorPage() {
     }
   };
 
+  // chuẩn hoá danh sách cho ScenarioComparison: chỉ những item có id (bắt buộc)
+  const savedForComparison = savedScenarios.filter(
+    (s): s is Scenario & { id: number } => typeof s.id === 'number'
+  );
+
+  // Bridge để khớp type kỳ vọng của ScenarioComparison
+  // - Hàm không async, trả về void
+  // - Tham số có thể có id string | number
+  const handleLoadScenarioFromComparison = (scenario: any): void => {
+    setCurrentScenario(scenario as Scenario);
+    void handleScenarioChange(scenario as Scenario);
+  };
+
+  const handleDeleteScenarioFromComparison = (id: string | number): void => {
+    const numericId = typeof id === 'string' ? Number(id) : id;
+    void handleDeleteScenario(numericId);
+  };
+
   // Container chuẩn giữa + “nudge” sang trái (đồng bộ Overview/Analysis)
   const CONTAINER = 'mx-auto max-w-[1440px] px-6';
   const NUDGE_LEFT = 'md:transform md:-translate-x-38 xl:-translate-x-30';
@@ -149,7 +167,12 @@ export default function SimulatorPage() {
               />
               <ImpactSummaryCards
                 currentScenario={currentScenario ?? {
-                  paymentAmount: 250, utilizationChange: -15, newAccounts: 0, payoffTimeline: 12, creditLimit: 5000
+                  paymentAmount: 250,
+                  utilizationChange: -15,
+                  newAccounts: 0,
+                  payoffTimeline: 12,
+                  creditLimit: 5000,
+                  accountAge: 24,
                 }}
               />
             </div>
@@ -166,9 +189,9 @@ export default function SimulatorPage() {
             {/* full width */}
             <div className="col-span-15 mt-8">
               <ScenarioComparison
-                savedScenarios={savedScenarios}
-                onLoadScenario={handleLoadScenario}
-                onDeleteScenario={handleDeleteScenario}
+                savedScenarios={savedForComparison as any}
+                onLoadScenario={handleLoadScenarioFromComparison}
+                onDeleteScenario={handleDeleteScenarioFromComparison}
               />
             </div>
           </div>

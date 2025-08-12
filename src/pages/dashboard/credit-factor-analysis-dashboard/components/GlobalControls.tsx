@@ -1,4 +1,4 @@
-// pages/credit-factor-analysis-dashboard/components/GlobalControls.tsx
+// src/pages/dashboard/credit-factor-analysis-dashboard/components/GlobalControls.tsx
 // Next.js + TypeScript – structure/markup intact
 
 import React from 'react';
@@ -40,13 +40,13 @@ const GlobalControls: React.FC<GlobalControlsProps> = ({
   lastUpdated,
 }) => {
   /* select options */
-  const factorOptions = [
+  const factorOptions: { value: FactorKey; label: string }[] = [
     { value: 'payment_history', label: 'Payment History' },
     { value: 'utilization', label: 'Credit Utilization' },
     { value: 'credit_age', label: 'Credit Age' },
     { value: 'new_credit', label: 'New Credit' },
     { value: 'credit_mix', label: 'Credit Mix' },
-  ] as const;
+  ];
 
   const timePeriodOptions: { value: TimePeriod; label: string }[] = [
     { value: 'monthly', label: 'Monthly View' },

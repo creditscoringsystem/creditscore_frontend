@@ -1,3 +1,4 @@
+// src/components/ForgotPasswordModal.tsx
 import { useState } from "react";
 
 interface Props {

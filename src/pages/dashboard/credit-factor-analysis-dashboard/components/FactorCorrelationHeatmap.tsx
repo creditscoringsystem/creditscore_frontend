@@ -4,8 +4,16 @@
 
 import { cn } from '@/utils/cn';
 import Icon from '@/components/AppIcon';
-import { FactorKey } from '@/types/factors';
+// ❌ import { FactorKey } from '@/types/factors';
 import React, { useState, useMemo } from 'react';
+
+// ✅ Khai báo cục bộ thay cho import bị thiếu
+type FactorKey =
+  | 'payment_history'
+  | 'utilization'
+  | 'credit_age'
+  | 'new_credit'
+  | 'credit_mix';
 
 interface Factor {
   key: FactorKey;

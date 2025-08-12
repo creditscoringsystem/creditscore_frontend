@@ -1,4 +1,3 @@
-// src/lib/mockApi.ts
 // An toàn với SSR + không import từ /pages, lưu localStorage khi chạy client.
 // Không cần 'use client' ở đây.
 
@@ -38,6 +37,43 @@ function write(rows: Scenario[]) {
   }
 }
 
+/* =================== Overview dashboard =================== */
+export async function fetchDashboard() {
+  return {
+    currentScore: 742,
+    previousScore: 730,
+    percentile: 78,
+    riskLevel: 'Good',
+    keyMetrics: {
+      monthlyChange: 12,
+      utilizationRate: 23,
+      utilizationChange: -3,
+      daysSinceUpdate: 2,
+    },
+    trend: Array.from({ length: 24 }).map((_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (23 - i));
+      const base = 736 + Math.round(Math.sin(i / 3) * 6);
+      return {
+        date: d.toISOString().slice(0, 10),
+        score: Math.max(700, Math.min(772, base)),
+      };
+    }),
+    factors: [
+      { name: 'Payment History',      weight: 35, score: 90, impact: 'Positive', status: 'Stable',         description: 'On-time payments' },
+      { name: 'Credit Utilization',   weight: 30, score: 72, impact: 'Neutral',  status: 'Could Improve',  description: 'Keep under 30%' },
+      { name: 'Credit Age',           weight: 15, score: 83, impact: 'Positive', status: 'Increasing',     description: 'Average age rising' },
+      { name: 'New Credit',           weight: 10, score: 76, impact: 'Neutral',  status: 'Stable',         description: 'Few recent inquiries' },
+      { name: 'Credit Mix',           weight: 10, score: 78, impact: 'Positive', status: 'Healthy',        description: 'Good mix of accounts' },
+    ],
+    alerts: [
+      { id: 101, type: 'payment',     severity: 'low',    title: 'Upcoming payment', message: 'Card **** 1234 due in 5 days', timestamp: new Date().toISOString(), read: false, actionable: true },
+      { id: 102, type: 'utilization', severity: 'medium', title: 'Utilization high', message: 'One card above 40%',           timestamp: new Date(Date.now() - 86400000).toISOString(), read: false, actionable: true },
+    ],
+  };
+}
+
+/* =================== Simulator (bạn đã có) =================== */
 export async function fetchSimulator() {
   return { savedScenarios: read() };
 }
@@ -86,9 +122,9 @@ export async function simulateScenario(s: Scenario, timeframe: number) {
       confidenceLevel: 85,
       timeToTarget: Math.max(6, Math.min(24, s.payoffTimeline)),
       factorImpacts: [
-        { factor: 'Payment History', current: 35, projected: 38, change: Math.max(0, Math.floor(paymentImpact / 2)) },
-        { factor: 'Credit Utilization', current: 25, projected: 30, change: Math.max(0, Math.floor(utilImpact / 2)) },
-        { factor: 'New Credit', current: 10, projected: Math.max(0, 10 - (s.newAccounts || 0) * 2), change: -(s.newAccounts || 0) * 2 },
+        { factor: 'Payment History',     current: 35, projected: 38, change: Math.max(0, Math.floor(paymentImpact / 2)) },
+        { factor: 'Credit Utilization',  current: 25, projected: 30, change: Math.max(0, Math.floor(utilImpact / 2)) },
+        { factor: 'New Credit',          current: 10, projected: Math.max(0, 10 - (s.newAccounts || 0) * 2), change: -(s.newAccounts || 0) * 2 },
       ],
       monthlyProgress,
     },

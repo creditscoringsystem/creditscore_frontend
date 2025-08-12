@@ -31,7 +31,8 @@ export interface AlertItem {
 }
 
 interface AlertFeedProps {
-  alerts: AlertItem[];
+  /** 🔒 Cho optional + default để chống crash khi không truyền props */
+  alerts?: AlertItem[];
 }
 
 /* ---------- palette ép cứng ---------- */
@@ -100,13 +101,11 @@ const timeAgo = (ts: string | Date) => {
 };
 
 /* ---------- component ---------- */
-const AlertFeed: React.FC<AlertFeedProps> = ({ alerts }) => {
+const AlertFeed: React.FC<AlertFeedProps> = ({ alerts = [] }) => {
   // copy local để thao tác UI (mark read, dismiss, reveal)
   const [items, setItems] = useState<AlertItem[]>(alerts);
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
-  const [visibleCount, setVisibleCount] = useState<number>(
-    Math.min(3, alerts.length),
-  );
+  const [visibleCount, setVisibleCount] = useState<number>(Math.min(3, alerts.length));
 
   // nếu props đổi -> đồng bộ lại state + reset visibleCount về 3
   useEffect(() => {
@@ -115,15 +114,8 @@ const AlertFeed: React.FC<AlertFeedProps> = ({ alerts }) => {
     setExpandedId(null);
   }, [alerts]);
 
-  const unreadCount = useMemo(
-    () => items.filter(a => !a.read).length,
-    [items],
-  );
-
-  const displayed = useMemo(
-    () => items.slice(0, visibleCount),
-    [items, visibleCount],
-  );
+  const unreadCount = useMemo(() => items.filter(a => !a.read).length, [items]);
+  const displayed = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
 
   /* ---------- actions ---------- */
   const mark = (id: string | number, action: 'mark_read' | 'dismiss' | 'resolve') => {
@@ -132,10 +124,10 @@ const AlertFeed: React.FC<AlertFeedProps> = ({ alerts }) => {
     } else if (action === 'dismiss') {
       setItems(prev => {
         const next = prev.filter(a => a.id !== id);
-        // giữ visibleCount hợp lệ
+        // giữ visibleCount hợp lệ dựa trên mảng mới
+        setVisibleCount(v => Math.min(v, next.length));
         return next;
       });
-      setVisibleCount(v => v > 0 ? Math.min(v, items.length - 1) : 0);
       if (expandedId === id) setExpandedId(null);
     } else {
       // resolve: tuỳ nghiệp vụ; demo log
@@ -147,12 +139,8 @@ const AlertFeed: React.FC<AlertFeedProps> = ({ alerts }) => {
     setExpandedId(expandedId === id ? null : id);
 
   const toggleViewMore = () => {
-    if (visibleCount < items.length) {
-      setVisibleCount(items.length);
-    } else {
-      setVisibleCount(Math.min(3, items.length));
-      setExpandedId(null);
-    }
+    setVisibleCount(v => (v < items.length ? items.length : Math.min(3, items.length)));
+    if (visibleCount >= items.length) setExpandedId(null);
   };
 
   return (

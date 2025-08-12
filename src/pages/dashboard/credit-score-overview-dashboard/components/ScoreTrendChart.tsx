@@ -12,11 +12,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import type {
-  TooltipProps,
-  NameType,
-  ValueType,
-} from 'recharts/types/component/DefaultTooltipContent';
+import type { TooltipProps } from 'recharts/types/component/Tooltip';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
 /* ───────── types ───────── */
 export type TimeRange = '3M' | '6M' | '1Y' | '2Y';
