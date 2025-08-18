@@ -1,4 +1,5 @@
 // src/components/HeroSection.tsx
+import Link from "next/link";
 import Image from "next/image";
 
 export default function HeroSection() {
@@ -9,10 +10,9 @@ export default function HeroSection() {
         relative
         w-full max-w-6xl mx-auto
         grid grid-cols-1 md:grid-cols-2 items-center gap-8
-        pt-12 pb-12 px-6          /* giảm padding dọc */
-        mt-6 md:mt-10             /* đẩy khối Hero xuống */
+        pt-12 pb-12 px-6
+        mt-6 md:mt-10
         overflow-visible
-        
       "
     >
       {/* ─────────────────────────────────────────────── Vector9 curve */}
@@ -40,10 +40,12 @@ export default function HeroSection() {
           Empower Your Future.
         </h1>
         <p className="text-gray-500 max-w-md">
-          Get instant insights into your credit score. Track, improve, and take control
-          of your financial health.
+          Get instant insights into your credit score. Track, improve, and take
+          control of your financial health.
         </p>
-        <button
+
+        <Link
+          href="/survey"
           className="
             text-white py-4 px-20 rounded-full font-medium w-max
             bg-[radial-gradient(circle_at_center,_#62FF46,_#0AC909,_#2BB32A)]
@@ -53,8 +55,8 @@ export default function HeroSection() {
             cursor-pointer
           "
         >
-          Check My Score Now &rarr;
-        </button>
+          Check My Score Now →
+        </Link>
       </div>
 
       {/* ─────────────────────────────────── RIGHT COLUMN */}
@@ -76,7 +78,8 @@ export default function HeroSection() {
           className="absolute right-[0.7rem] top-1/2 -translate-y-[35%] rotate-6 z-20"
         />
       </div>
-       <div className="h-[200px] w-full"></div> 
+
+      <div className="h-[200px] w-full"></div>
     </section>
   );
 }
