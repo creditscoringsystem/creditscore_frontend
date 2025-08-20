@@ -13,6 +13,20 @@ import AlertFeed       from './components/AlertFeed';
 
 // 🔧 Sửa 1: dùng namespace import để không phụ thuộc named export cụ thể
 import * as mockApi from '@/lib/mockApi';
+import { getCurrentScore } from '@/services/survey.service';
+import { getToken } from '@/services/auth.service';
+
+function decodeJwt(token: string): any {
+  try {
+    if (typeof window === 'undefined' || !('atob' in window)) return null;
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = window.atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
 type TimeRange = '3M' | '6M' | '1Y' | '2Y';
 interface KeyMetrics { monthlyChange: number; utilizationRate: number; utilizationChange: number; daysSinceUpdate: number; }
@@ -61,20 +75,48 @@ export default function CreditScoreOverviewDashboard() {
   const load = async () => {
     setIsLoading(true);
     try {
-      // 🔧 Sửa 2: gọi hàm nếu có, nếu không thì fallback data để build không lỗi
-      const d =
-        typeof (mockApi as any).fetchDashboard === 'function'
-          ? await (mockApi as any).fetchDashboard()
-          : {
-              currentScore: 742,
-              previousScore: 730,
-              percentile: 78,
-              riskLevel: 'Good',
-              keyMetrics: { monthlyChange: 12, utilizationRate: 23, utilizationChange: -3, daysSinceUpdate: 2 },
-              trend: makeDemoScoreHistory(24, 748),
-              factors: [],
-              alerts: [],
-            };
+      // 🔧 Thử lấy điểm thật từ BE theo userId trong JWT
+      const token = getToken();
+      const claims = token ? decodeJwt(token) : null;
+      const userId: string | undefined = claims?.sub || claims?.user_id || claims?.uid || claims?.id;
+
+      let d: any = null;
+      if (userId) {
+        try {
+          const real = await getCurrentScore(userId);
+          // Chuẩn hoá dữ liệu tối thiểu từ BE
+          d = {
+            currentScore: real?.score ?? 742,
+            previousScore: real?.previousScore ?? 730,
+            percentile: real?.percentile ?? 78,
+            riskLevel: real?.band ?? real?.riskLevel ?? 'Good',
+            keyMetrics: real?.keyMetrics ?? { monthlyChange: 12, utilizationRate: 23, utilizationChange: -3, daysSinceUpdate: 2 },
+            trend: real?.trend ?? makeDemoScoreHistory(24, 748),
+            factors: real?.factors ?? [],
+            alerts: real?.alerts ?? [],
+          };
+        } catch {
+          // nếu API thật lỗi, fallback mock
+          d = null;
+        }
+      }
+
+      if (!d) {
+        // fallback mock để không vỡ UI khi chưa có BE
+        d =
+          typeof (mockApi as any).fetchDashboard === 'function'
+            ? await (mockApi as any).fetchDashboard()
+            : {
+                currentScore: 742,
+                previousScore: 730,
+                percentile: 78,
+                riskLevel: 'Good',
+                keyMetrics: { monthlyChange: 12, utilizationRate: 23, utilizationChange: -3, daysSinceUpdate: 2 },
+                trend: makeDemoScoreHistory(24, 748),
+                factors: [],
+                alerts: [],
+              };
+      }
 
       // d should be: { currentScore, previousScore, percentile, riskLevel, keyMetrics, trend:[{date,score}], factors, alerts }
       setCurrentScore(d.currentScore);

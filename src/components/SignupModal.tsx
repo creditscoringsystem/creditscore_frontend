@@ -1,6 +1,7 @@
 // src/components/SignupModal.tsx
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { signup } from '@/services/auth.service';
 
 interface Props {
   onClose: () => void;
@@ -27,13 +28,25 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
   const handleChange = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [k]: e.target.value });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const pwdErr = validatePasswordStrength(form.pwd);
     if (pwdErr) return setError(pwdErr);
     if (!passwordsMatch) return setError("Passwords do not match.");
     setError(null);
-    setSuccess(true);
+    setSubmitting(true);
+    try {
+      const name = [form.first, form.last].filter(Boolean).join(' ').trim();
+      await signup({ name, email: form.email, password: form.pwd });
+      setSuccess(true);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Đăng ký thất bại';
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Xử lý đóng popup có hiệu ứng out
@@ -139,8 +152,9 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
                   type="submit"
                   className="btn-primary-green"
                   style={{ height: 44 }}
+                  disabled={submitting}
                 >
-                  Create an account
+                  {submitting ? 'Đang đăng ký...' : 'Create an account'}
                 </button>
               </div>
             </form>

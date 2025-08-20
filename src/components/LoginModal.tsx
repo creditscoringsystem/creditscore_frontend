@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { login } from "@/services/auth.service";
+import { useRouter } from "next/router";
 
 interface Props {
   onClose: () => void;
@@ -11,16 +13,26 @@ export default function LoginModal({ onClose, onLoginSuccess, onForgotPassword }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "demo@example.com" && password === "demo123") {
-      setError(false);
+    setSubmitting(true);
+    setError(null);
+    try {
+      await login({ email, password });
       onLoginSuccess();
-    } else {
-      setError(true);
+      // Redirect to survey page after successful login
+      router.push('/survey');
+      onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Đăng nhập thất bại";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
