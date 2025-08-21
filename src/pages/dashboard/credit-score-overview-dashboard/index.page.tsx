@@ -75,13 +75,37 @@ export default function CreditScoreOverviewDashboard() {
   const load = async () => {
     setIsLoading(true);
     try {
+      // Ưu tiên hiển thị điểm vừa tính xong từ sessionStorage (nếu có)
+      let d: any = null;
+      try {
+        if (typeof window !== 'undefined') {
+          const raw = window.sessionStorage.getItem('latest_score_payload');
+          if (raw) {
+            const cached = JSON.parse(raw);
+            const cur = cached?.current_score ?? cached?.score ?? cached?.currentScore ?? 742;
+            const prev = cached?.previous_score ?? cached?.previousScore ?? cur;
+            d = {
+              currentScore: cur,
+              previousScore: prev,
+              percentile: cached?.percentile ?? 78,
+              riskLevel: cached?.band ?? cached?.category ?? 'Good',
+              keyMetrics: { monthlyChange: 12, utilizationRate: 23, utilizationChange: -3, daysSinceUpdate: 0 },
+              trend: (cached?.trend && Array.isArray(cached.trend) ? cached.trend : makeDemoScoreHistory(24, cur)),
+              factors: cached?.factors ?? [],
+              alerts: cached?.alerts ?? [],
+            };
+            // Dọn cache để không hiển thị lặp lại cho lần sau
+            window.sessionStorage.removeItem('latest_score_payload');
+          }
+        }
+      } catch {}
+
       // 🔧 Thử lấy điểm thật từ BE theo userId trong JWT
       const token = getToken();
       const claims = token ? decodeJwt(token) : null;
       const userId: string | undefined = claims?.sub || claims?.user_id || claims?.uid || claims?.id;
 
-      let d: any = null;
-      if (userId) {
+      if (!d && userId) {
         try {
           const real = await getCurrentScore(userId);
           // Chuẩn hoá dữ liệu tối thiểu từ BE

@@ -66,7 +66,13 @@ export default function SurveyPage() {
 
       if (userId) {
         // Gửi thẳng câu trả lời theo format SurveyAnswersIn tới Score Service
-        await calculateScore(userId, answers as Record<string, string>);
+        const result = await calculateScore(userId, answers as Record<string, string>);
+        // Lưu tạm để dashboard hiển thị ngay (tránh phụ thuộc việc persist bên BE)
+        try {
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.setItem('latest_score_payload', JSON.stringify(result ?? {}));
+          }
+        } catch {}
       }
       // Điều hướng về trang tổng quan điểm
       router.push('/dashboard/credit-score-overview-dashboard');
