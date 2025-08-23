@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Icon from '@/components/AppIcon';
 import Button from '@/components/ui/Button';
 import { motion } from 'framer-motion';
+import { getMyProfile } from '@/services/profile.service';
 
 type NotificationType = 'success' | 'warning' | 'alert';
 interface Notification { id: number; title: string; message: string; time: string; type: NotificationType; unread: boolean; }
@@ -152,16 +153,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             )}
           </div>
 
-          <div className="hidden md:block text-right">
-            <div className="text-sm font-medium text-[#111827]">John Doe</div>
-            <div className="text-xs text-[#6B7280]">Premium Member</div>
-          </div>
-          <div className="relative">
-            <div className="w-10 h-10 bg-[#00FF88] rounded-full flex items-center justify-center">
-              <Icon name="User" size={20} color="#0F0F0F" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#00FF88] rounded-full border-2 border-white" />
-          </div>
+          <HeaderUserName />
+          <HeaderAvatar />
         </div>
       </div>
     </header>
@@ -169,3 +162,83 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 };
 
 export default Header;
+
+// Subcomponent: fetch display name/email và lắng nghe cập nhật
+const HeaderUserName: React.FC = () => {
+  const [name, setName] = useState<string>('');
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchName = async () => {
+      try {
+        const p = await getMyProfile();
+        if (!mounted) return;
+        const full = (p.full_name || '').trim();
+        setName(full || (p.email || ''));
+      } catch {
+        // ignore
+      }
+    };
+    fetchName();
+    const onUpdated = () => fetchName();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('profile:updated', onUpdated as any);
+    }
+    return () => {
+      mounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('profile:updated', onUpdated as any);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="hidden md:block text-right">
+      <div className="text-sm font-medium text-[#111827]">{name || '—'}</div>
+      <div className="text-xs text-[#6B7280]">Premium Member</div>
+    </div>
+  );
+};
+
+// Subcomponent: avatar thật nếu có, fallback icon
+const HeaderAvatar: React.FC = () => {
+  const [avatar, setAvatar] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchAvatar = async () => {
+      try {
+        const p = await getMyProfile();
+        if (!mounted) return;
+        setAvatar(p.avatar || null);
+      } catch {
+        // ignore
+      }
+    };
+    fetchAvatar();
+    const onUpdated = () => fetchAvatar();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('profile:updated', onUpdated as any);
+    }
+    return () => {
+      mounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('profile:updated', onUpdated as any);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="relative">
+      <div className="w-10 h-10 bg-[#00FF88] rounded-full flex items-center justify-center overflow-hidden">
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          <Icon name="User" size={20} color="#0F0F0F" />
+        )}
+      </div>
+      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#00FF88] rounded-full border-2 border-white" />
+    </div>
+  );
+};

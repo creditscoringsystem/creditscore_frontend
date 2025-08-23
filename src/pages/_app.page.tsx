@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { SurveyProvider } from "@/contexts/SurveyContext";
 import AppLayout from "@/components/ui/AppLayout";
 import { Poppins, M_PLUS_1 } from "next/font/google";
+import ThemeLanguageProvider from "@/contexts/ThemeLanguageProvider";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
@@ -27,12 +28,14 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <SurveyProvider>
-      <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
-      <main className={`${mplus1.className} ${isDashboard ? '' : poppins.className}`}>  
-        {isDashboard ? <AppLayout>{content}</AppLayout> : content}
-      </main>
+      <ThemeLanguageProvider>
+        <Head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </Head>
+        <main className={`${mplus1.className} ${isDashboard ? '' : poppins.className}`}>
+          {isDashboard ? <AppLayout>{content}</AppLayout> : content}
+        </main>
+      </ThemeLanguageProvider>
     </SurveyProvider>
   );
 }

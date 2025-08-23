@@ -1,6 +1,7 @@
 // src/components/SignupModal.tsx
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { signup } from '@/services/auth.service';
 
 interface Props {
   onClose: () => void;
@@ -27,13 +28,55 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
   const handleChange = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [k]: e.target.value });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const pwdErr = validatePasswordStrength(form.pwd);
     if (pwdErr) return setError(pwdErr);
     if (!passwordsMatch) return setError("Passwords do not match.");
     setError(null);
-    setSuccess(true);
+    setSubmitting(true);
+    try {
+      // Backend chỉ chấp nhận { email, password }
+      await signup({ email: form.email, password: form.pwd });
+      setSuccess(true);
+    } catch (err: any) {
+      const status: number | undefined = err?.response?.status;
+      const data = err?.response?.data;
+      let msg: string | null = null;
+
+      // Log tạm để dễ debug khi cần
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.error('Signup error:', { status, data, err });
+      }
+
+      // Một số backend trả về { message } hoặc { error } hoặc { detail } (string/array) hoặc { errors: [...] }
+      if (typeof data?.message === 'string') msg = data.message;
+      else if (typeof data?.error === 'string') msg = data.error;
+      else if (typeof data?.detail === 'string') msg = data.detail;
+      else if (Array.isArray(data?.detail) && data.detail.length) {
+        // FastAPI validation error dạng [{loc, msg, type}]
+        msg = data.detail.map((e: any) => (e?.msg || e?.message || JSON.stringify(e))).join('\n');
+      } else if (Array.isArray(data?.errors) && data.errors.length) {
+        msg = data.errors.map((e: any) => (e?.msg || e?.message || JSON.stringify(e))).join('\n');
+      }
+
+      if (status === 409 || /already\s*exists|duplicate|conflict/i.test(msg || '')) {
+        setError('Email đã tồn tại. Vui lòng đăng nhập hoặc dùng email khác.');
+      } else if (status === 400 || status === 422) {
+        setError(msg || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.');
+      } else if (status && status >= 500) {
+        setError('Máy chủ gặp sự cố. Vui lòng thử lại sau.');
+      } else if (!status && err?.message && /network|cors|fetch/i.test(err.message)) {
+        setError('Không thể kết nối máy chủ (CORS/Network). Kiểm tra lại kết nối hoặc cấu hình gateway.');
+      } else {
+        setError(msg || 'Đăng ký thất bại');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Xử lý đóng popup có hiệu ứng out
@@ -133,14 +176,24 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
               </div>
               <p className="text-xs">Use 8 or more characters with a mix of letters, numbers &amp; symbols</p>
               {passwordsMatch && <p className="text-green-500 text-sm">Passwords match ✓</p>}
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-sm">
+                  {/^Email đã tồn tại\./.test(error)
+                    ? (<>
+                        {error} {' '}
+                        <a href="/login" className="underline text-[#0AC909]" onClick={onBackToLogin}>Đăng nhập</a>
+                      </>)
+                    : error}
+                </p>
+              )}
               <div className="text-center pt-2">
                 <button
                   type="submit"
                   className="btn-primary-green"
                   style={{ height: 44 }}
+                  disabled={submitting}
                 >
-                  Create an account
+                  {submitting ? 'Đang đăng ký...' : 'Create an account'}
                 </button>
               </div>
             </form>

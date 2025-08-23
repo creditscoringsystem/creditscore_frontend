@@ -1,22 +1,72 @@
 // components/overview/DashboardHeader.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from '@/components/AppIcon';
+import { getMyPreferences, updateMyPreferences, getMyProfile } from '@/services/profile.service';
+import { applyLanguage, applyTheme } from '@/contexts/ThemeLanguageProvider';
 
 export interface DashboardHeaderProps {
   onExport: (format: string) => Promise<void>;
   onRefresh: () => Promise<void>;
   lastUpdated: string | Date;
+  userName?: string;
 }
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onExport,
   onRefresh,
   lastUpdated,
+  userName,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [prefs, setPrefs] = useState<{ theme?: 'light'|'dark'|'auto'; language?: 'vi'|'en'|'zh' }>({});
+  const [isSavingPref, setIsSavingPref] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [displayName, setDisplayName] = useState<string | undefined>(userName);
+
+  // Sync displayName with prop changes
+  useEffect(() => {
+    setDisplayName(userName);
+  }, [userName]);
+
+  // Load current preferences once
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await getMyPreferences();
+        setPrefs(p || {});
+      } catch {
+        // ignore if not set yet
+      }
+    })();
+  }, []);
+
+  // Fetch user profile name if not provided by prop; and subscribe to profile updates
+  useEffect(() => {
+    let mounted = true;
+    async function fetchName() {
+      try {
+        const prof = await getMyProfile();
+        if (!mounted) return;
+        const full = (prof.full_name || '').trim();
+        const name = full || (prof.email || '').trim() || undefined;
+        setDisplayName(name);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!userName) fetchName();
+
+    const onUpdated = () => fetchName();
+    window.addEventListener('profile:updated', onUpdated as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener('profile:updated', onUpdated as any);
+    };
+  }, [userName]);
 
   const handleExport = async (format: string) => {
     setIsExporting(true);
@@ -33,6 +83,23 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       await onRefresh();
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleSetPref = async (key: 'theme'|'language', value: 'light'|'dark'|'auto'|'vi'|'en'|'zh') => {
+    // Optimistic UI
+    const next = { ...prefs, [key]: value } as any;
+    setPrefs(next);
+    // Apply immediately to UI
+    if (key === 'theme') applyTheme(value as any);
+    if (key === 'language') applyLanguage(value as any);
+    setIsSavingPref(true);
+    try {
+      await updateMyPreferences({ [key]: value } as any);
+    } catch {
+      // rollback if needed (optional)
+    } finally {
+      setIsSavingPref(false);
     }
   };
 
@@ -59,6 +126,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <h2 className="text-2xl md:text-[26px] font-semibold text-[#0F172A] tracking-[-0.015em]">
             Credit Score Overview
           </h2>
+          {displayName ? (
+            <div className="text-sm text-[#374151] mt-1 truncate" title={displayName}>
+              Welcome, {displayName}
+            </div>
+          ) : null}
           <div className="flex items-center gap-2 mt-2">
             <span className="inline-block w-2 h-2 rounded-full bg-[#00FF88] animate-pulse" />
             <span className="text-sm text-[#6B7280]">
@@ -143,18 +215,69 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </div>
           </div>
 
-          {/* Settings */}
-          <button
-            className="
-              flex items-center gap-2 px-4 h-10 rounded-lg
-              text-sm font-medium text-[#374151]
-              border border-[#E5E7EB] bg-white
-              hover:bg-[#F3F4F6] transition
-            "
-          >
-            <Icon name="Settings" size={16} />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
+          {/* Settings dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsSettingsOpen((v) => !v)}
+              className="
+                flex items-center gap-2 px-4 h-10 rounded-lg
+                text-sm font-medium text-[#374151]
+                border border-[#E5E7EB] bg-white
+                hover:bg-[#F3F4F6] transition
+              "
+              aria-expanded={isSettingsOpen}
+              aria-haspopup="menu"
+            >
+              <Icon name="Settings" size={16} />
+              <span className="hidden sm:inline">Settings</span>
+              <Icon name="ChevronDown" size={14} />
+            </button>
+
+            <div
+              className={`
+                absolute right-0 top-full mt-2 w-64
+                bg-white border border-[#E5E7EB] rounded-lg
+                shadow-[0_10px_24px_rgba(0,0,0,0.10)]
+                transition-all duration-150 z-10
+                ${isSettingsOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}
+              `}
+              role="menu"
+            >
+              <div className="p-3">
+                <div className="text-xs font-semibold text-[#6B7280] px-1 mb-1">Theme</div>
+                <div className="flex gap-2 mb-3">
+                  {(['light','dark','auto'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => handleSetPref('theme', t)}
+                      className={`px-3 h-8 rounded border text-sm ${
+                        prefs.theme === t ? 'bg-[#F3F4F6] border-[#D1D5DB]' : 'bg-white border-[#E5E7EB]'
+                      }`}
+                      disabled={isSavingPref}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-xs font-semibold text-[#6B7280] px-1 mb-1">Language</div>
+                <div className="flex gap-2">
+                  {(['vi','en','zh'] as const).map((lng) => (
+                    <button
+                      key={lng}
+                      onClick={() => handleSetPref('language', lng)}
+                      className={`px-3 h-8 rounded border text-sm capitalize ${
+                        prefs.language === lng ? 'bg-[#F3F4F6] border-[#D1D5DB]' : 'bg-white border-[#E5E7EB]'
+                      }`}
+                      disabled={isSavingPref}
+                    >
+                      {lng}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

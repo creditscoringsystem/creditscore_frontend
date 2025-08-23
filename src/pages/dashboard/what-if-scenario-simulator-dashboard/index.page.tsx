@@ -15,11 +15,12 @@ import { CurrencyProvider, useCurrency } from '@/features/simulator/CurrencyCont
 
 import {
   fetchSimulator,
-  simulateScenario,
   saveScenario as apiSaveScenario,
   deleteScenario as apiDeleteScenario,
   exportResults as apiExportResults,
 } from '@/lib/mockApi';
+import { simulateScore, simulateProjection } from '@/services/survey.service';
+import { getToken } from '@/services/auth.service';
 
 /** Page Component (function declaration + default export) */
 export default function SimulatorPage() {
@@ -29,6 +30,64 @@ export default function SimulatorPage() {
   const [savedScenarios, setSavedScenarios] = useState<Scenario[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<number>(12);
   const [projectedResults, setProjectedResults] = useState<any>(null);
+
+  // Decode JWT (same style as overview page)
+  function decodeJwt(token: string): any {
+    try {
+      if (typeof window === 'undefined' || !('atob' in window)) return null;
+      const payload = token.split('.')[1];
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = window.atob(base64);
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  // Map Scenario controls -> hypothetical survey answers (flat) for Score Service
+  const toHypotheticalAnswers = (s: Scenario) => {
+    // credit_usage bucket from utilizationChange
+    const util = Math.abs(s.utilizationChange ?? 0);
+    const credit_usage =
+      util < 10
+        ? '<10%'
+        : util <= 30
+        ? '11-30%'
+        : util <= 50
+        ? '31-50%'
+        : util <= 70
+        ? '51-70%'
+        : '>70%';
+    const credit_cards = String(Math.max(1, 1 + (s.newAccounts ?? 0)));
+    return {
+      // override a few impactful fields; defaults will be filled server-side mapper
+      credit_usage,
+      credit_cards,
+      pay_timing: 'on_time',
+      late_12m: '0',
+      pay_full_on_time: 'yes',
+    } as Record<string, string>;
+  };
+
+  // Map ProjectionOut (BE) -> ProjectedResults (FE ResultsPanel expects)
+  function mapProjectionToResults(out: any) {
+    if (!out) return null;
+    const proj = Array.isArray(out.projection) ? out.projection : [];
+    const min = proj.length ? Math.min(...proj.map((p: any) => Number(p.confLo ?? p.simulated ?? 0))) : undefined;
+    const max = proj.length ? Math.max(...proj.map((p: any) => Number(p.confHi ?? p.simulated ?? 0))) : undefined;
+    const target = Number(out?.summary?.projected ?? out?.score ?? 0) || undefined;
+    const confidencePct = Number(out?.summary?.confidence ?? Math.round((out?.confidence ?? 0) * 100)) || undefined;
+    const timeToTarget = (proj.length ? (proj[proj.length - 1]?.month ?? proj.length) : undefined);
+    const monthlyProgress = proj.map((p: any) => ({ month: Number(p.month) + 1, score: Number(p.simulated), confidence: confidencePct ?? 85 }));
+
+    return {
+      scoreRange: target ? { min: (min ?? Math.max(300, target - 25)), max: (max ?? Math.min(850, target + 25)), target } : undefined,
+      confidenceLevel: confidencePct,
+      timeToTarget,
+      monthlyProgress,
+      creditScoreChange: typeof out?.summary?.delta === 'number' ? out.summary.delta : undefined,
+    } as any;
+  }
 
   /** nạp danh sách scenario đã lưu (mock) */
   const loadSaved = async () => {
@@ -54,8 +113,29 @@ export default function SimulatorPage() {
   const handleScenarioChange = async (scenario: Scenario) => {
     setCurrentScenario(scenario);
     try {
-      const res = await simulateScenario(scenario, selectedTimeframe);
-      setProjectedResults(res?.projectedResults ?? null);
+      // Gọi BE thật nếu có userId, đồng thời vẫn dựng dữ liệu local/mock cho UI
+      const token = getToken();
+      const claims = token ? decodeJwt(token) : null;
+      const userId: string | undefined = claims?.sub || claims?.user_id || claims?.uid || claims?.id;
+      if (userId) {
+        try {
+          const answers = toHypotheticalAnswers(scenario);
+          await simulateScore(userId, answers);
+        } catch (e) {
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.warn('simulateScore failed, falling back to local projection', e);
+          }
+        }
+      }
+      // Gọi projection thật để hiển thị biểu đồ
+      if (userId) {
+        const answers = toHypotheticalAnswers(scenario);
+        const out = await simulateProjection(userId, answers);
+        setProjectedResults(mapProjectionToResults(out));
+      } else {
+        setProjectedResults(null);
+      }
     } catch {
       setProjectedResults(null);
     }
@@ -75,8 +155,22 @@ export default function SimulatorPage() {
     setSelectedTimeframe(tf);
     if (currentScenario) {
       try {
-        const res = await simulateScenario(currentScenario, tf);
-        setProjectedResults(res?.projectedResults ?? null);
+        const token = getToken();
+        const claims = token ? decodeJwt(token) : null;
+        const userId: string | undefined = claims?.sub || claims?.user_id || claims?.uid || claims?.id;
+        if (userId) {
+          try {
+            const answers = toHypotheticalAnswers(currentScenario);
+            await simulateScore(userId, answers);
+          } catch {}
+        }
+        if (userId && currentScenario) {
+          const answers = toHypotheticalAnswers(currentScenario);
+          const out = await simulateProjection(userId, answers);
+          setProjectedResults(mapProjectionToResults(out));
+        } else {
+          setProjectedResults(null);
+        }
       } catch {
         setProjectedResults(null);
       }
