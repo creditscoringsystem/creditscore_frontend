@@ -2,10 +2,14 @@
   "name": "credit-scoring-ui",
   "version": "0.1.0",
   "private": true,
+
+  "engine":{
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0 -p $PORT",
     "lint": "next lint"
   },
   "dependencies": {

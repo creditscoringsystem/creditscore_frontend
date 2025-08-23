@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   // Chỉ các file có hậu tố .page.* mới là page/route.
   // Mọi component .tsx nằm trong pages/**/components/** sẽ không bị coi là page nữa.
   pageExtensions: ['page.tsx', 'page.ts', 'page.jsx', 'page.js', 'api.ts', 'api.js'],
+
+  output: 'standalone'
 };
 
 export default nextConfig;
