@@ -1,10 +1,11 @@
 // src/pages/dashboard/profile-management-dashboard/components/ProfileHeader.tsx
 'use client';
 
-import React, { useState, useRef, ChangeEvent, DragEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, DragEvent, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Icon from '@/components/AppIcon';
 import Button from '@/components/ui/Button';
+import { getMyProfile } from '@/services/profile.service';
 
 /* ============ CONFIG MÀU ============ */
 // Màu neon “đặc trưng” toàn site
@@ -37,9 +38,12 @@ const ProfileHeader: React.FC = () => {
   const [completionPercentage] = useState<number>(78);
 
   // Ảnh & màu
-  const [preview, setPreview] = useState<string | null>(null); // DataURL của ảnh upload
+  const [preview, setPreview] = useState<string | null>(null); // URL/DataURL của ảnh
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>(NEON); // mặc định NEON
+
+  // Tên hiển thị
+  const [displayName, setDisplayName] = useState<string>('');
 
   // UI
   const [isDragging, setIsDragging] = useState(false);
@@ -52,6 +56,35 @@ const ProfileHeader: React.FC = () => {
   // Save state
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Load profile (name + avatar) lúc mount và khi profile được cập nhật
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const p = await getMyProfile();
+        if (!mounted) return;
+        const name = (p.full_name || '').trim() || p.email || '';
+        setDisplayName(name);
+        if (p.avatar && !selectedFile) {
+          setPreview(p.avatar);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    load();
+    const onUpdated = () => load();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('profile:updated', onUpdated as any);
+    }
+    return () => {
+      mounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('profile:updated', onUpdated as any);
+      }
+    };
+  }, [selectedFile]);
 
   /* ---------- Utils ---------- */
   const readFileAsDataURL = (file: File) =>
@@ -223,7 +256,7 @@ const ProfileHeader: React.FC = () => {
 
             <div>
               <div className="font-medium" style={{ color: '#0F172A' }}>
-                John Doe
+                {displayName || '—'}
               </div>
               <div className="text-sm" style={{ color: '#6B7280' }}>
                 Premium Member

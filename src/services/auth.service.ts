@@ -6,7 +6,7 @@ export const getToken = () => (typeof window !== 'undefined' ? window.localStora
 export const clearToken = () => { if (typeof window !== 'undefined') window.localStorage.removeItem(TOKEN_KEY); };
 
 export type LoginDto = { email: string; password: string };
-export type SignupDto = { name?: string; email: string; password: string };
+export type SignupDto = { email: string; password: string };
 export type ResetPasswordDto = { token: string; newPassword: string };
 export type ChangePasswordDto = { oldPassword: string; newPassword: string };
 
@@ -42,6 +42,7 @@ export async function login(payload: LoginDto) {
 }
 
 export async function signup(payload: SignupDto) {
+  // Theo OpenAPI User Service, chỉ chấp nhận { email, password }
   const { data } = await api.post('/api/v1/auth/signup', payload);
   return data;
 }

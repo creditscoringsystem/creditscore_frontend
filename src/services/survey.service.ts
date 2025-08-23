@@ -1,5 +1,6 @@
 // src/services/survey.service.ts
 import api from '@/lib/apiClient';
+import { surveyConfig } from '@/configs/surveyConfig';
 
 // Map FE answers (camelCase) to Score Service expected labels (snake_case)
 // and ensure all required fields exist with valid defaults
@@ -47,10 +48,65 @@ function mapToSurveyAnswersIn(src: Record<string, string> = {}): Record<string, 
   return m;
 }
 
-export async function submitSurvey(answers: Record<string, string>) {
-  // Gửi toàn bộ câu trả lời
-  const { data } = await api.post('/api/v1/survey/submit', { answers });
-  return data; // có thể trả surveyId/message
+// Lấy danh sách câu hỏi từ Survey Service
+export async function getSurveyQuestions(): Promise<Array<{ id: number; key?: string; label?: string }>> {
+  const { data } = await api.get('/api/v1/survey/questions');
+  return Array.isArray(data) ? data : [];
+}
+
+// Chuẩn hoá chuỗi để so sánh label gần đúng
+function norm(s?: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+// Xây map từ FE key -> label hiển thị (lấy từ surveyConfig)
+function buildFeKeyToLabelMap(): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const step of surveyConfig) {
+    for (const q of step) {
+      m[q.key] = q.label;
+    }
+  }
+  return m;
+}
+
+// Gửi khảo sát theo schema SurveySubmitRequest
+export async function submitSurvey(userId: string, answers: Record<string, string>) {
+  // Tải câu hỏi từ BE để lấy question_id
+  const questions = await getSurveyQuestions();
+  const byKey = new Map<string, { id: number; key?: string; label?: string }>();
+  const byLabel = new Map<string, { id: number; key?: string; label?: string }>();
+  for (const q of questions) {
+    if (q.key) byKey.set(q.key, q);
+    if (q.label) byLabel.set(norm(q.label), q);
+  }
+
+  const feKeyToLabel = buildFeKeyToLabelMap();
+
+  const payload = {
+    user_id: userId,
+    answers: [] as Array<{ user_id: string; question_id: number; answer: string }>,
+  };
+
+  for (const [k, v] of Object.entries(answers || {})) {
+    if (v == null || v === '') continue;
+    let q = byKey.get(k);
+    if (!q) {
+      const label = feKeyToLabel[k];
+      if (label) q = byLabel.get(norm(label));
+    }
+    if (q && typeof q.id === 'number') {
+      payload.answers.push({ user_id: userId, question_id: q.id, answer: String(v) });
+    }
+  }
+
+  const { data } = await api.post('/api/v1/survey/submit', payload);
+  return data; // message/result from Survey Service
 }
 
 // Tính điểm và lưu
@@ -58,7 +114,7 @@ export async function calculateScore(userId: string, answers?: Record<string, st
   // Score Service yêu cầu payload là SurveyAnswersIn (flat fields), không bọc {answers}
   // Lưu ý: BE đánh dấu requestBody là required. Nếu không có answers sẽ có thể 422.
   const payload = mapToSurveyAnswersIn(answers ?? {});
-  const { data } = await api.post(`/api/v1/scores/${userId}/calculate`, payload);
+  const { data } = await api.post(`/api/v1/scores/${userId}`, payload);
   return data; // { user_id, current_score, category, ... }
 }
 
@@ -71,7 +127,14 @@ export async function getCurrentScore(userId: string) {
 // Lịch sử điểm
 export async function getScoreHistory(userId: string) {
   const { data } = await api.get(`/api/v1/scores/${userId}/history`);
-  return data;
+  // Score Service trả { user_id, history: [...] }
+  return Array.isArray(data?.history) ? data.history : data;
+}
+
+// Yếu tố ảnh hưởng điểm và gợi ý
+export async function getScoreFactors(userId: string) {
+  const { data } = await api.get(`/api/v1/scores/${userId}/factors`);
+  return data; // { user_id, factors: [...], recommendations: [...] }
 }
 
 // Mô phỏng What-If (không lưu)
@@ -80,4 +143,11 @@ export async function simulateScore(userId: string, hypotheticalAnswers: Record<
   const payload = mapToSurveyAnswersIn(hypotheticalAnswers);
   const { data } = await api.post(`/api/v1/scores/${userId}/simulate`, payload);
   return data;
+}
+
+// Mô phỏng What-If kèm projection theo tháng (không lưu)
+export async function simulateProjection(userId: string, hypotheticalAnswers: Record<string, string>) {
+  const payload = mapToSurveyAnswersIn(hypotheticalAnswers);
+  const { data } = await api.post(`/api/v1/scores/${userId}/simulate/projection`, payload);
+  return data; // ProjectionOut { score, category, confidence?, projection[], summary }
 }

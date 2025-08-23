@@ -1,11 +1,13 @@
 // src/pages/dashboard/profile-management-dashboard/components/PersonalInfoForm.tsx
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 import Icon from '@/components/AppIcon';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { getMyProfile, updateMyProfile } from '@/services/profile.service';
 
 /**
  * QUICK API HOOKUP (REST)
@@ -52,8 +54,8 @@ type Field = {
 const FIELDS: Field[] = [
   { key: 'firstName',  label: 'First Name',     icon: 'User',     type: 'text',  required: true,  placeholder: 'John' },
   { key: 'lastName',   label: 'Last Name',      icon: 'User',     type: 'text',  required: true,  placeholder: 'Doe' },
-  { key: 'email',      label: 'Email Address',  icon: 'Mail',     type: 'email', required: true,  placeholder: 'you@example.com' },
-  { key: 'phone',      label: 'Phone Number',   icon: 'Phone',    type: 'tel',   required: true,  placeholder: '+1 (555) 123-4567' },
+  { key: 'email',      label: 'Email Address',  icon: 'Mail',     type: 'email', required: false, placeholder: 'you@example.com' },
+  { key: 'phone',      label: 'Phone Number',   icon: 'Phone',    type: 'tel',   required: false, placeholder: '+1 (555) 123-4567' },
   { key: 'dateOfBirth',label: 'Date of Birth',  icon: 'Calendar', type: 'date' },
   { key: 'address',    label: 'Street Address', icon: 'MapPin',   type: 'text',  placeholder: '123 Main Street' },
   { key: 'city',       label: 'City',           icon: 'MapPin',   type: 'text',  placeholder: 'New York' },
@@ -62,29 +64,62 @@ const FIELDS: Field[] = [
 ];
 
 const PersonalInfoForm: React.FC = () => {
-  // dữ liệu mặc định (demo)
+  // dữ liệu form
   const [form, setForm] = useState<FormData>({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    dateOfBirth: '1990-05-15',
-    address: '123 Main Street',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
   });
 
   // trạng thái lưu
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date(Date.now() - 14 * 24 * 3600 * 1000)); // “2 weeks ago”
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // errors
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
   // theo dõi “đã chỉnh sửa” để enable nút Save
   const lastSavedRef = useRef<FormData>(form);
+
+  // Load profile hiện tại
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await getMyProfile();
+        const fullName = (p.full_name || '').trim();
+        let firstName = '';
+        let lastName = '';
+        if (fullName) {
+          const parts = fullName.split(' ');
+          firstName = parts.slice(0, -1).join(' ') || parts[0] || '';
+          lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+        }
+        const next: FormData = {
+          firstName,
+          lastName,
+          email: p.email || '',
+          phone: p.phone || '',
+          dateOfBirth: p.date_of_birth || '',
+          address: p.address || '',
+          city: '',
+          state: '',
+          zipCode: '',
+        };
+        setForm(next);
+        lastSavedRef.current = next;
+        setLastUpdated(p.updated_at ? new Date(p.updated_at) : new Date());
+      } catch {
+        // nếu chưa có profile, giữ form trống
+      }
+    })();
+  }, []);
   const isDirty = useMemo(
     () => JSON.stringify(lastSavedRef.current) !== JSON.stringify(form),
     [form]
@@ -100,8 +135,8 @@ const PersonalInfoForm: React.FC = () => {
     const next: Partial<Record<keyof FormData, string>> = {};
     if (!form.firstName.trim()) next.firstName = 'Required';
     if (!form.lastName.trim()) next.lastName = 'Required';
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Invalid email';
-    if (form.phone.replace(/\D/g, '').length < 8) next.phone = 'Invalid phone';
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Invalid email';
+    if (form.phone && form.phone.replace(/\D/g, '').length < 8) next.phone = 'Invalid phone';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -112,19 +147,31 @@ const PersonalInfoForm: React.FC = () => {
     setSaveMsg(null);
 
     try {
-      // ======= REPLACE THIS BLOCK WITH YOUR REAL API CALL =======
-      await new Promise((r) => setTimeout(r, 700)); // giả lập network
-      // const res = await fetch('/api/profile', { ... }); // <-- xem hướng dẫn trên cùng file
-      // if (!res.ok) throw new Error('Save failed');
-      // const { updatedAt } = await res.json();
-      // setLastUpdated(new Date(updatedAt));
-      // ==========================================================
+      // Map sang payload của profile service
+      const full_name = [form.firstName, form.lastName].filter(Boolean).join(' ').trim() || null;
+      const payload = {
+        full_name,
+        email: form.email || null,
+        phone: form.phone || null,
+        address: form.address || null,
+        date_of_birth: form.dateOfBirth || null,
+      } as any;
+      const res = await updateMyProfile(payload);
 
       lastSavedRef.current = form;
-      setLastUpdated(new Date());
+      setLastUpdated(res?.updated_at ? new Date(res.updated_at) : new Date());
       setSaveMsg('Saved successfully');
-    } catch (e) {
-      setSaveMsg('Save failed. Please try again.');
+      // Thông báo toàn cục để Header/khác có thể refetch
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('profile:updated'));
+      }
+    } catch (e: any) {
+      // Hiển thị chi tiết lỗi từ API nếu có
+      const apiMsg = axios.isAxiosError(e)
+        ? (e.response?.data as any)?.message || e.message
+        : (e?.message || 'Unknown error');
+      console.error('Update profile failed:', e);
+      setSaveMsg(`Save failed: ${apiMsg}`);
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(null), 2500);

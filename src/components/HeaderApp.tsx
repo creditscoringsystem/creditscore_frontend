@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useScrollSpy } from '@/hooks/useScrollSpy';
 import { sections } from '@/configs/sectionsConfig';
 import Icon from '@/components/AppIcon';
+import { getMyProfile } from '@/services/profile.service';
 
 /**
  * HeaderApp component:
@@ -15,6 +16,44 @@ import Icon from '@/components/AppIcon';
  * - Scroll-spy navigation in center (links to landing page hashes)
  * - User avatar + name on right
  */
+
+// Subcomponent hiển thị tên user (fetch + subscribe cập nhật)
+const HeaderAppUserName: React.FC = () => {
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchName = async () => {
+      try {
+        const p = await getMyProfile();
+        if (!mounted) return;
+        const full = (p.full_name || '').trim();
+        setName(full || (p.email || ''));
+      } catch {
+        // ignore
+      }
+    };
+    fetchName();
+    const onUpdated = () => fetchName();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('profile:updated', onUpdated as any);
+    }
+    return () => {
+      mounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('profile:updated', onUpdated as any);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="hidden md:block text-right">
+      <div className="text-sm font-medium text-black">{name || '—'}</div>
+      <div className="text-xs text-black">Premium Member</div>
+    </div>
+  );
+};
+
 export default function HeaderApp() {
   const menuItems = sections;
   const activeId = useScrollSpy(menuItems.map(item => item.id), 80);
@@ -100,10 +139,7 @@ export default function HeaderApp() {
 
         {/* User Avatar & Name */}
         <div className="flex items-center space-x-3">
-          <div className="hidden md:block text-right">
-            <div className="text-sm font-medium text-black">John Doe</div>
-            <div className="text-xs text-black">Premium Member</div>
-          </div>
+          <HeaderAppUserName />
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center neon-glow cursor-pointer hover:scale-105 transition-smooth">
               <Icon name="User" size={20} color="#0F0F0F" />

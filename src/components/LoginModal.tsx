@@ -14,6 +14,7 @@ export default function LoginModal({ onClose, onLoginSuccess, onForgotPassword }
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'not_found' | 'invalid_password' | 'generic' | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function LoginModal({ onClose, onLoginSuccess, onForgotPassword }
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setErrorType(null);
     try {
       await login({ email, password });
       onLoginSuccess();
@@ -29,8 +31,19 @@ export default function LoginModal({ onClose, onLoginSuccess, onForgotPassword }
       router.push('/survey');
       onClose();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Đăng nhập thất bại";
-      setError(msg);
+      const status: number | undefined = err?.response?.status;
+      const msg: string = err?.response?.data?.message || err?.message || '';
+      const m = msg.toLowerCase();
+      if (status === 404 || m.includes('not found') || m.includes('no such user') || m.includes('user does not exist')) {
+        setErrorType('not_found');
+        setError('Email này chưa có tài khoản. Bạn có muốn đăng ký mới không?');
+      } else if (status === 401 || m.includes('invalid password') || m.includes('wrong password') || m.includes('unauthorized')) {
+        setErrorType('invalid_password');
+        setError('Sai mật khẩu. Vui lòng kiểm tra và thử lại.');
+      } else {
+        setErrorType('generic');
+        setError(msg || 'Đăng nhập thất bại');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -153,9 +166,15 @@ export default function LoginModal({ onClose, onLoginSuccess, onForgotPassword }
 
             {/* Thông báo lỗi */}
             {error && (
-              <p className="text-red-200 text-sm">
-                Sorry, you entered the wrong email or password.
-              </p>
+              <div className="text-sm">
+                {errorType === 'not_found' ? (
+                  <p className="text-red-200">Email chưa đăng ký. <a href="/signup" onClick={handleClose} className="underline text-[#0AC909]">Tạo tài khoản ngay</a>.</p>
+                ) : errorType === 'invalid_password' ? (
+                  <p className="text-red-200">Sai mật khẩu. Thử lại hoặc <button type="button" className="underline text-[#0AC909]" onClick={() => { handleClose(); onForgotPassword(); }}>quên mật khẩu?</button></p>
+                ) : (
+                  <p className="text-red-200">{error}</p>
+                )}
+              </div>
             )}
 
             {/* Nút Sign in */}

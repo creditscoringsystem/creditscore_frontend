@@ -51,18 +51,20 @@ export default function SurveyPage() {
     setError(null);
     setSubmitting(true);
     try {
-      // Gửi khảo sát về BE chính (nếu route chưa sẵn qua Kong, bỏ qua lỗi và tiếp tục)
-      try {
-        await submitSurvey(answers as Record<string, string>);
-      } catch (subErr) {
-        // Không chặn luồng nếu submit survey thất bại
-        // TODO: có thể ghi log hoặc gửi telemetry nếu cần
-      }
-      // Lấy userId từ JWT để tính điểm và lưu
+      // Lấy userId từ JWT để submit và tính điểm
       const token = getToken();
       const claims = token ? decodeJwt(token) : null;
       const userId: string | undefined =
         claims?.sub || claims?.user_id || claims?.uid || claims?.id;
+
+      // Gửi khảo sát về Survey Service theo schema SurveySubmitRequest
+      if (userId) {
+        try {
+          await submitSurvey(userId, answers as Record<string, string>);
+        } catch (subErr) {
+          // Không chặn luồng nếu submit survey thất bại
+        }
+      }
 
       if (userId) {
         // Gửi thẳng câu trả lời theo format SurveyAnswersIn tới Score Service

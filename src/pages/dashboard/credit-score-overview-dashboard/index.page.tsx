@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import DashboardShell from '@/components/layouts/DashboardShell';
 
 import DashboardHeader from './components/DashboardHeader';
@@ -13,7 +14,9 @@ import AlertFeed       from './components/AlertFeed';
 
 // 🔧 Sửa 1: dùng namespace import để không phụ thuộc named export cụ thể
 import * as mockApi from '@/lib/mockApi';
-import { getCurrentScore } from '@/services/survey.service';
+import { getCurrentScore, getScoreHistory, getScoreFactors } from '@/services/survey.service';
+import { getAlerts } from '@/services/alerts.service';
+import { getMyProfile } from '@/services/profile.service';
 import { getToken } from '@/services/auth.service';
 
 function decodeJwt(token: string): any {
@@ -47,6 +50,7 @@ export default function CreditScoreOverviewDashboard() {
   const [creditFactors, setCreditFactors] = useState<Factor[]>([]);
   const [recentAlerts,  setRecentAlerts]  = useState<AlertItem[]>([]);
   const [scoreTrendData, setScoreTrendData] = useState<TrendPoint[]>([]);
+  const [userName, setUserName] = useState<string | undefined>(undefined);
 
   // helpers dựng điểm chart từ ISO date (giữ y nguyên style của bạn)
   const buildScorePointsFromISO = (rows: { date: string; score: number }[]): TrendPoint[] => {
@@ -107,18 +111,64 @@ export default function CreditScoreOverviewDashboard() {
 
       if (!d && userId) {
         try {
-          const real = await getCurrentScore(userId);
+          const [real, history, alerts, factorsResp, profile] = await Promise.all([
+            getCurrentScore(userId),
+            getScoreHistory(userId).catch(() => null),
+            getAlerts(userId).catch(() => []),
+            getScoreFactors(userId).catch(() => null),
+            getMyProfile().catch(() => null),
+          ]);
+          // Map history (nếu có) sang dạng {date, score}
+          let trendRows: { date: string; score: number }[] | null = null;
+          if (Array.isArray(history)) {
+            try {
+              trendRows = history.map((r: any) => ({
+                date:
+                  r?.date ??
+                  r?.timestamp ??
+                  r?.month ??
+                  r?.calculated_at ??
+                  (typeof r?.updated_at === 'string' ? r.updated_at : new Date().toISOString().slice(0, 10)),
+                score: Number(r?.score ?? r?.value ?? r?.points ?? r?.current_score ?? real?.current_score ?? 742),
+              }));
+            } catch {}
+          }
+
           // Chuẩn hoá dữ liệu tối thiểu từ BE
+          // Map factorsResp -> FactorBreakdown props
+          let mappedFactors: any[] = [];
+          try {
+            const raw = Array.isArray(factorsResp?.factors) ? factorsResp.factors : [];
+            mappedFactors = raw.map((it: any) => {
+              const impactRaw = String(it?.impact ?? 'Neutral');
+              const impact = impactRaw.charAt(0).toUpperCase() + impactRaw.slice(1).toLowerCase();
+              return {
+                name: String(it?.name ?? 'Factor'),
+                weight: Number(it?.weight ?? 0),
+                score: Number(it?.score ?? 0),
+                impact: (impact === 'Positive' || impact === 'Negative' || impact === 'Neutral') ? impact : 'Neutral',
+                status: String(it?.description ?? ''),
+                description: String(it?.description ?? ''),
+              };
+            });
+          } catch {}
+
           d = {
-            currentScore: real?.score ?? 742,
-            previousScore: real?.previousScore ?? 730,
-            percentile: real?.percentile ?? 78,
-            riskLevel: real?.band ?? real?.riskLevel ?? 'Good',
+            currentScore: real?.current_score ?? real?.score ?? 742,
+            previousScore: real?.previous_score ?? real?.previousScore ?? 730,
+            percentile: real?.percentile ?? null,
+            riskLevel: real?.category ?? real?.band ?? real?.riskLevel ?? 'Good',
             keyMetrics: real?.keyMetrics ?? { monthlyChange: 12, utilizationRate: 23, utilizationChange: -3, daysSinceUpdate: 2 },
-            trend: real?.trend ?? makeDemoScoreHistory(24, 748),
-            factors: real?.factors ?? [],
-            alerts: real?.alerts ?? [],
+            trend: trendRows && trendRows.length ? trendRows : (real?.trend ?? makeDemoScoreHistory(24, 748)),
+            factors: Array.isArray(mappedFactors) && mappedFactors.length ? mappedFactors : (real?.factors ?? []),
+            alerts: Array.isArray(alerts) ? alerts : [],
           };
+
+          // set user name from profile
+          try {
+            const name = profile?.full_name || profile?.email || userId;
+            if (name) setUserName(String(name));
+          } catch {}
         } catch {
           // nếu API thật lỗi, fallback mock
           d = null;
@@ -196,10 +246,22 @@ export default function CreditScoreOverviewDashboard() {
       {/* bọc toàn bộ nội dung trong CONTAINER + NUDGE_LEFT để dời sang trái */}
       <div className={`${CONTAINER} ${NUDGE_LEFT}`}>
         <header className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2">Credit Score Overview</h1>
-          <p className="text-[var(--color-muted-foreground)]">
-            Monitor your credit score trends and key metrics
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold mb-2">Credit Score Overview</h1>
+              <p className="text-[var(--color-muted-foreground)]">
+                Monitor your credit score trends and key metrics
+              </p>
+            </div>
+            <Link
+              href="/dashboard/what-if-scenario-simulator-dashboard"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg font-medium border"
+              style={{ borderColor: 'var(--color-border,#E5E7EB)', background: 'var(--color-card,#fff)', boxShadow: '0 6px 24px rgba(15,23,42,0.06)' }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: 'var(--color-neon,#12F7A0)' }} />
+              What-If Simulator
+            </Link>
+          </div>
         </header>
 
         <div className="mb-6">
@@ -207,6 +269,7 @@ export default function CreditScoreOverviewDashboard() {
             onExport={handleExport}
             onRefresh={handleRefresh}
             lastUpdated={new Date(Date.now() - 2 * 60 * 60 * 1000)}
+            userName={userName}
           />
         </div>
 
