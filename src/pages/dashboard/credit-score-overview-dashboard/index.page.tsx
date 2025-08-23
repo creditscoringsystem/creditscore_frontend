@@ -1,5 +1,4 @@
 // src/pages/dashboard/credit-score-overview-dashboard/index.tsx
-'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';

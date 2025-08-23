@@ -38,8 +38,8 @@ export default function SignupModal({ onClose, onBackToLogin }: Props) {
     setError(null);
     setSubmitting(true);
     try {
-      const name = [form.first, form.last].filter(Boolean).join(' ').trim();
-      await signup({ name, email: form.email, password: form.pwd });
+      // Backend chỉ chấp nhận { email, password }
+      await signup({ email: form.email, password: form.pwd });
       setSuccess(true);
     } catch (err: any) {
       const status: number | undefined = err?.response?.status;
